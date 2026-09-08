@@ -29,7 +29,7 @@ typedef struct
     short ActValue;
 } RegStructure;
 
-extern RegStructure Registers[NUMBER_OF_OUTPUT_REGISTERS];
+extern RegStructure holdingRegisters[NUMBER_OF_OUTPUT_REGISTERS];
 extern volatile unsigned short ModbusTimerValue;
 
 // Main Functions

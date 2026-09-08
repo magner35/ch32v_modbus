@@ -38,11 +38,11 @@ int main(void)
     // 1ms tick
     NVIC_EnableIRQ(SysTicK_IRQn);
     SysTick->SR &= ~(1 << 0);
-    SysTick->CMP = SystemCoreClock / (1000000 / 10) - 1;
+    SysTick->CMP = (SystemCoreClock / 1000) - 1;
     SysTick->CNT = 0;
     SysTick->CTLR = 0xF;
 
-    soft_timer_init(&test_timer, 1000000, 0);
+    soft_timer_init(&test_timer, 1000, 0);
 
     while (1)
     {
@@ -86,9 +86,9 @@ void TIM1_UP_IRQHandler()
 
         if (tim_tick % 1000 == 0)
         {
-            Registers[0].ActValue++;
-            Registers[1].ActValue++;
-            Registers[2].ActValue++;
+            holdingRegisters[0].ActValue++;
+            holdingRegisters[1].ActValue++;
+            holdingRegisters[2].ActValue++;
         }
 
         TIM1->INTFR = ~TIM_FLAG_Update;
@@ -106,4 +106,6 @@ void SysTick_Handler(void)
     soft_timer_inc(10);
     // modbus_timeout_inc(10);
     SysTick->SR = 0;
+    // GPIO_SetBits(LED_GPIO_PORT, LED_GPIO_PIN);
+    // GPIO_ResetBits(LED_GPIO_PORT, LED_GPIO_PIN);
 }

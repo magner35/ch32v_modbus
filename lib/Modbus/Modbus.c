@@ -138,9 +138,6 @@ void HandleModbusError(char ErrorCode)
 #if MODBUS_READ_HOLDING_REGISTERS_ENABLED > 0
 void HandleModbusReadHoldingRegisters(void)
 {
-    // Holding registers are effectively numerical outputs that can be written to by the host.
-    // They can be control registers or analogue outputs.
-    // We potientially have one - the pwm output value
     unsigned int StartAddress = 0;
     unsigned int NumberOfRegisters = 0;
     unsigned int i = 0;
@@ -162,7 +159,7 @@ void HandleModbusReadHoldingRegisters(void)
 
         for (i = 0; i < NumberOfRegisters; i++)
         {
-            unsigned short CurrentData = Registers[StartAddress + i].ActValue;
+            unsigned short CurrentData = holdingRegisters[StartAddress + i].ActValue;
 
             Tx_Data.DataBuf[Tx_Data.DataLen] = (unsigned char)((CurrentData & 0xFF00) >> 8);
             Tx_Data.DataBuf[Tx_Data.DataLen + 1] = (unsigned char)(CurrentData & 0xFF);
@@ -202,7 +199,7 @@ void HandleModbusWriteSingleRegister(void)
         HandleModbusError(ERROR_CODE_02);
     else
     {
-        Registers[Address].ActValue = Value;
+        holdingRegisters[Address].ActValue = Value;
         // Output data buffer is exact copy of input buffer
         for (i = 0; i < 4; ++i)
             Tx_Data.DataBuf[i] = Rx_Data.DataBuf[i];
@@ -251,7 +248,7 @@ void HandleModbusWriteMultipleRegisters(void)
         for (i = 0; i < NumberOfRegisters; i++)
         {
             Value = (Rx_Data.DataBuf[5 + 2 * i] << 8) + (Rx_Data.DataBuf[6 + 2 * i]);
-            Registers[StartAddress + i].ActValue = Value;
+            holdingRegisters[StartAddress + i].ActValue = Value;
         }
 
         SendMessage();
@@ -437,9 +434,6 @@ void ProcessModbus(void)
 {
     if (Tx_State != RXTX_IDLE) // If answer is ready, send it!
     {
-        // set_rs485_de_enable();
-        // set_rs485_de_disable();
-
         TxRTU();
     }
 
