@@ -45,8 +45,9 @@ RXTX_DATA Tx_Data;
 unsigned int Tx_Current = 0;
 unsigned int Tx_CRC16 = 0xFFFF;
 RXTX_STATE Tx_State = RXTX_IDLE;
-unsigned char Tx_Buf[MODBUS_TRANSMIT_BUFFER_SIZE];
-unsigned int Tx_Buf_Size = 0;
+volatile unsigned char Tx_Buf[MODBUS_TRANSMIT_BUFFER_SIZE];
+volatile unsigned int Tx_Buf_Size = 0;
+volatile unsigned int Tx_Index = 0;
 
 RXTX_DATA Rx_Data;
 unsigned int Rx_CRC16 = 0xFFFF;
@@ -87,11 +88,8 @@ void CRC16(const unsigned char Data, unsigned int *CRC)
 unsigned char DoSlaveTX(void)
 {
     set_rs485_de_enable();
-    ModBus_UART_String(Tx_Buf, Tx_Buf_Size);
-    while (USART_GetFlagStatus(USART1, USART_FLAG_TC) == RESET)
-        ;
-    set_rs485_de_disable();
-    Tx_Buf_Size = 0;
+    Tx_Index = 0;
+    USART_ITConfig(USART1, USART_IT_TXE, ENABLE);
     return TRUE;
 }
 
@@ -401,7 +399,6 @@ void RxRTU(void)
 void TxRTU(void)
 {
     Tx_CRC16 = 0xFFFF;
-    Tx_Buf_Size = 0;
     Tx_Buf[Tx_Buf_Size++] = Tx_Data.Address;
     CRC16(Tx_Data.Address, &Tx_CRC16);
     Tx_Buf[Tx_Buf_Size++] = Tx_Data.Function;
@@ -412,15 +409,10 @@ void TxRTU(void)
         Tx_Buf[Tx_Buf_Size++] = Tx_Data.DataBuf[Tx_Current];
         CRC16(Tx_Data.DataBuf[Tx_Current], &Tx_CRC16);
     }
-
     Tx_Buf[Tx_Buf_Size++] = Tx_CRC16 & 0x00FF;
     Tx_Buf[Tx_Buf_Size++] = (Tx_CRC16 & 0xFF00) >> 8;
 
-    if (DoSlaveTX())
-    {
-        // set_rs485_de_enable();
-        // set_rs485_de_disable();
-    }
+    DoSlaveTX();
     Tx_State = RXTX_IDLE;
 }
 
