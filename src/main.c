@@ -1,6 +1,7 @@
 #include "debug.h"
 #include "Modbus.h"
 #include "soft_timer.h"
+#include "eeprom.h"
 
 /* Global define */
 #define MODBUS_ID 0x1
@@ -25,9 +26,6 @@ int main(void)
 
     NVIC_PriorityGroupConfig(NVIC_PriorityGroup_1);
     SystemCoreClockUpdate();
-    Delay_Init();
-
-    InitModbus(MODBUS_ID);
 
     // LED
     GPIO_InitStructure.GPIO_Pin = LED_GPIO_PIN;
@@ -35,21 +33,39 @@ int main(void)
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(LED_GPIO_PORT, &GPIO_InitStructure);
 
+    // Бесконечное переключение пина на максимальной скорости
+    /* while (1)
+    {
+        GPIOD->BSHR = GPIO_Pin_3;
+        GPIOD->BCR = GPIO_Pin_3;
+    } */
+
+    USART_Printf_Init(9600);
+    printf("SystemClk:%d\r\n", SystemCoreClock);
+
+    Delay_Init();
+
+    InitModbus(MODBUS_ID);
+
     // 1ms tick
-    NVIC_EnableIRQ(SysTicK_IRQn);
+    // NVIC_EnableIRQ(SysTicK_IRQn);
     SysTick->SR &= ~(1 << 0);
     SysTick->CMP = (SystemCoreClock / 1000) - 1;
     SysTick->CNT = 0;
     SysTick->CTLR = 0xF;
 
-    soft_timer_init(&test_timer, 1000, 0);
+    soft_timer_init(&test_timer, 3000, 0);
 
     while (1)
     {
         ProcessModbus();
 
-        if (soft_timer_check(&test_timer))
+        /* if (soft_timer_check(&test_timer))
         {
+            // GPIO_SetBits(LED_GPIO_PORT, LED_GPIO_PIN);
+            // save_Counter_To_Flash(0xAAAA);
+            // GPIO_ResetBits(LED_GPIO_PORT, LED_GPIO_PIN);
+
             if (aaa)
             {
                 aaa = 0;
@@ -60,19 +76,10 @@ int main(void)
                 aaa = 1;
                 GPIO_ResetBits(LED_GPIO_PORT, LED_GPIO_PIN);
             }
-        }
+        } */
     }
 
     return 0;
-}
-
-void USART1_IRQHandler_old(void)
-{
-    // receive interrupt
-    if (USART_GetITStatus(USART1, USART_IT_RXNE) != RESET)
-    {
-        ReceiveInterrupt(USART_ReceiveData(USART1));
-    }
 }
 
 void USART1_IRQHandler(void)
@@ -81,9 +88,9 @@ void USART1_IRQHandler(void)
     if (USART_GetITStatus(USART1, USART_IT_RXNE) != RESET)
     {
         uint8_t rx_data = USART_ReceiveData(USART1);
-        // ВАЖНО: Защита от эха RS485.
-        // Пока мы сами передаем (Tx_Index < Tx_Buf_Size), мы будем видеть свои же байты на RX.
-        // Игнорируем их, чтобы не сломать логику парсинга входящих кадров.
+        // IMPORTANT: RS485 echo protection.
+        // While we ourselves are transmitting (Tx_Index < Tx_Buf_Size), we will see our own bytes on RX.
+        // We ignore them so as not to break the logic for parsing incoming frames.
         if (Tx_Index >= Tx_Buf_Size)
         {
             ReceiveInterrupt(rx_data);
@@ -94,28 +101,28 @@ void USART1_IRQHandler(void)
     {
         if (Tx_Index < Tx_Buf_Size)
         {
-            // Кладем следующий байт в регистр данных
+            // Put the next byte into the data register
             USART_SendData(USART1, Tx_Buf[Tx_Index++]);
         }
         else
         {
-            // Все байты загружены в сдвиговый регистр.
-            // Отключаем прерывание TXE, чтобы не мешало.
+            // All bytes are loaded into the shift register.
+            // Disable the TXE interrupt so it doesn't interfere.
             USART_ITConfig(USART1, USART_IT_TXE, DISABLE);
-            // Включаем прерывание TC, чтобы поймать момент полного выхода последнего байта.
+            // We enable the TC interrupt to catch the moment the last byte is completely released.
             USART_ITConfig(USART1, USART_IT_TC, ENABLE);
         }
     }
     // DE switching
     if (USART_GetITStatus(USART1, USART_IT_TC) != RESET)
     {
-        // Сбрасываем флаг TC (чтение SR уже могло его сбросить, но для надежности)
+        // Reset the TC flag (reading SR could already reset it, but to be safe)
         USART_ClearITPendingBit(USART1, USART_IT_TC);
-        // Отключаем прерывание TC
+        // Disable TC interrupt
         USART_ITConfig(USART1, USART_IT_TC, DISABLE);
-        // Переключаем RS485 на прием (DE = LOW)
+        // Switch RS485 to receive (DE = LOW)
         set_rs485_de_disable();
-        // Очищаем размер буфера, сигнализируя об окончании передачи
+        // Clear the buffer size, signaling the end of the transfer
         Tx_Buf_Size = 0;
         Tx_Index = 0;
     }
@@ -126,11 +133,16 @@ void TIM1_UP_IRQHandler()
     if (TIM1->INTFR & TIM_FLAG_Update)
     {
         tim_tick++;
+
+        ModBus_TimerValues();
+
         if (tim_tick % 1000 == 0)
         {
             holdingRegisters[0].ActValue++;
             holdingRegisters[1].ActValue++;
             holdingRegisters[2].ActValue++;
+
+            save_Counter_To_Flash(0xAAAA);
         }
         TIM1->INTFR = ~TIM_FLAG_Update;
     }
@@ -145,7 +157,7 @@ void SysTick_Handler(void) __attribute__((interrupt("WCH-Interrupt-fast")));
 void SysTick_Handler(void)
 {
     soft_timer_inc(1);
-    ModBus_TimerValues();
+    // ModBus_TimerValues();
     // modbus_timeout_inc(10);
     SysTick->SR = 0;
 }
