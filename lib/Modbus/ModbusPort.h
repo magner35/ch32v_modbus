@@ -24,7 +24,6 @@ extern void ModBus_TIMER_Initialise(void);
 extern void ModBus_UART_Put(unsigned char c);
 extern unsigned char ModBus_UART_String(unsigned char *s, unsigned int Length);
 
-extern void ReceiveInterrupt(unsigned char Data);
 extern void ModBus_TimerValues(void);
 
 // Serial port transceiver enable

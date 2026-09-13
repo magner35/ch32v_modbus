@@ -126,4 +126,60 @@ void set_rs485_de_disable(void)
     GPIO_ResetBits(RS485_DE_GPIO_PORT, RS485_DE_GPIO_PIN);
 }
 
+void USART1_IRQHandler(void) __attribute__((interrupt("WCH-Interrupt-fast")));
+void USART1_IRQHandler(void)
+{
+    // receive interrupt
+    if (USART_GetITStatus(USART1, USART_IT_RXNE) != RESET)
+    {
+        uint8_t rx_data = USART_ReceiveData(USART1);
+        // IMPORTANT: RS485 echo protection.
+        // While we ourselves are transmitting (Tx_Index < Tx_Buf_Size), we will see our own bytes on RX.
+        // We ignore them so as not to break the logic for parsing incoming frames.
+        if (Tx_Index >= Tx_Buf_Size)
+        {
+            ReceiveInterrupt(rx_data);
+        }
+    }
+    // tranceive interrupt
+    if (USART_GetITStatus(USART1, USART_IT_TXE) != RESET)
+    {
+        if (Tx_Index < Tx_Buf_Size)
+        {
+            // Put the next byte into the data register
+            USART_SendData(USART1, Tx_Buf[Tx_Index++]);
+        }
+        else
+        {
+            // All bytes are loaded into the shift register.
+            // Disable the TXE interrupt so it doesn't interfere.
+            USART_ITConfig(USART1, USART_IT_TXE, DISABLE);
+            // We enable the TC interrupt to catch the moment the last byte is completely released.
+            USART_ITConfig(USART1, USART_IT_TC, ENABLE);
+        }
+    }
+    // DE switching
+    if (USART_GetITStatus(USART1, USART_IT_TC) != RESET)
+    {
+        // Reset the TC flag (reading SR could already reset it, but to be safe)
+        USART_ClearITPendingBit(USART1, USART_IT_TC);
+        // Disable TC interrupt
+        USART_ITConfig(USART1, USART_IT_TC, DISABLE);
+        // Switch RS485 to receive (DE = LOW)
+        set_rs485_de_disable();
+        // Clear the buffer size, signaling the end of the transfer
+        Tx_Buf_Size = 0;
+        Tx_Index = 0;
+    }
+}
+
+void TIM1_UP_IRQHandler(void) __attribute__((interrupt("WCH-Interrupt-fast")));
+void TIM1_UP_IRQHandler()
+{
+    if (TIM1->INTFR & TIM_FLAG_Update)
+    {
+        TIM1->INTFR = ~TIM_FLAG_Update;
+    }
+}
+
 /******************************************************************************/
