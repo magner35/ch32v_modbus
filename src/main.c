@@ -52,7 +52,7 @@ int main(void)
 
         if (soft_timer_check(&test_timer))
         {
-            save_Counter_To_Flash(0xAAAA);
+            // save_Counter_To_Flash(0xAAAA);
             holdingRegisters[0].ActValue++;
             holdingRegisters[1].ActValue++;
             holdingRegisters[2].ActValue++;

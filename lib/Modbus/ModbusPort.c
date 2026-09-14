@@ -114,6 +114,7 @@ void ReceiveInterrupt(unsigned char Data)
 void ModBus_TimerValues(void)
 {
     ModbusTimerValue++;
+    Tx_DelayCounter++;
 }
 
 void set_rs485_de_enable(void)

@@ -6,6 +6,8 @@
 #ifndef __MODBUS__H
 #define __MODBUS__H
 
+#define MODBUS_RESPONSE_DELAY 5
+
 #define NUMBER_OF_OUTPUT_REGISTERS 10 // Modbus RTU Slave Output Register Number
                                       // Have to put a number of registers here
                                       // It has to be bigger than 0 (zero)!!
@@ -35,6 +37,7 @@ extern volatile unsigned short ModbusTimerValue;
 extern volatile unsigned char Tx_Buf[];
 extern volatile unsigned int Tx_Buf_Size;
 extern volatile unsigned int Tx_Index;
+extern volatile unsigned int Tx_DelayCounter;
 
 // Main Functions
 extern void InitModbus(unsigned char ModbusSlaveAddress);

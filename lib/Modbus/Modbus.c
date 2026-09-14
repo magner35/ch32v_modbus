@@ -48,6 +48,7 @@ RXTX_STATE Tx_State = RXTX_IDLE;
 volatile unsigned char Tx_Buf[MODBUS_TRANSMIT_BUFFER_SIZE];
 volatile unsigned int Tx_Buf_Size = 0;
 volatile unsigned int Tx_Index = 0;
+volatile unsigned int Tx_DelayCounter = 0;
 
 RXTX_DATA Rx_Data;
 unsigned int Rx_CRC16 = 0xFFFF;
@@ -106,6 +107,7 @@ unsigned char SendMessage(void)
         return FALSE;
 
     Tx_Current = 0;
+    Tx_DelayCounter = 0;
     Tx_State = RXTX_START;
 
     return TRUE;
@@ -426,7 +428,10 @@ void ProcessModbus(void)
 {
     if (Tx_State != RXTX_IDLE) // If answer is ready, send it!
     {
-        TxRTU();
+        if (Tx_DelayCounter >= MODBUS_RESPONSE_DELAY)
+        {
+            TxRTU();
+        }
     }
 
     RxRTU(); // Call this function every cycle
