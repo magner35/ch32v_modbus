@@ -1,6 +1,7 @@
 #ifndef _MODBUS_
 #define _MODBUS_
 
+#include <stdint.h>
 /*----------------------------------------------------------------------------*/
 
 #define PREV_LONG_MEMBER(NAME) NAME##_dummy, NAME = NAME##_dummy - 1 + 2 // enum with step
@@ -136,15 +137,11 @@ typedef union
 
 void taskSerial(void *pvParameters);
 /*----------------------------------------------------------------------------*/
-uint16_t inputRegisters[INPUT_REG_COUNT];
-uint16_t holdingRegisters[HOLDING_REG_COUNT];
 
 void modbusLongToRegister(uint32_t src, uint16_t *dst);
 uint32_t modbusRegisterToLong(uint16_t *src);
 void modbusFloatToRegister(float src, uint16_t *dst);
 float modbusRegisterToFloat(uint16_t *src);
-
-void modbusFloatToInputReg(float value, uint8_t index);
 
 void regToFloatCopy(uint16_t dest[], float source[], uint8_t count);
 void floatToRegCopy(float source[], uint16_t dest[], uint8_t count);
