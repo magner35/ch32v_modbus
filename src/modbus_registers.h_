@@ -1,0 +1,152 @@
+#ifndef _MODBUS_
+#define _MODBUS_
+
+/*----------------------------------------------------------------------------*/
+
+#define PREV_LONG_MEMBER(NAME) NAME##_dummy, NAME = NAME##_dummy - 1 + 2 // enum with step
+#define INPUT_REG_COUNT IREG_LASTREGISTER
+#define HOLDING_REG_COUNT HREG_LASTREGISTER
+/*----------------------------------------------------------------------------*/
+
+enum
+{
+    IREG_STATUS,                              // format:U, type:U16
+    IREG_RATE,                                // format:F, type:FLOAT
+    PREV_LONG_MEMBER(IREG_RATELPM),           // format:F, type:FLOAT
+    PREV_LONG_MEMBER(IREG_TOTAL),             // format:F, type:FLOAT
+    PREV_LONG_MEMBER(IREG_TOTALSUM),          // format:F, type:FLOAT
+    PREV_LONG_MEMBER(IREG_TOTALPLUS),         // format:F, type:FLOAT
+    PREV_LONG_MEMBER(IREG_TOTALMINUS),        // format:F, type:FLOAT
+    PREV_LONG_MEMBER(IREG_GTOTAL),            // format:F, type:FLOAT
+    PREV_LONG_MEMBER(IREG_BATCH),             // format:F, type:FLOAT
+    PREV_LONG_MEMBER(IREG_FREQUENCY),         // format:F, type:FLOAT
+    PREV_LONG_MEMBER(IREG_PULSES),            // format:UL, type:U32
+    PREV_LONG_MEMBER(IREG_UNITS),             // format:U, type:U16
+    IREG_RATEMAXLPM,                          // format:F, type:FLOAT
+    PREV_LONG_MEMBER(IREG_RUNTIME_FLOWMETER), // format:UL, type:TIME
+    PREV_LONG_MEMBER(IREG_RUNTIME_DEVICE),    // format:UL, type:TIME
+    PREV_LONG_MEMBER(IREG_POWERON_DEVICE),    // format:Ul, type:TIME
+    PREV_LONG_MEMBER(IREG_POWERON_NUMBER),    // format:U, type:U16
+    IREG_METERCRC16,                          // format:U, type:U16
+    IREG_METERTIME,                           // format:UL, type:TIME
+    PREV_LONG_MEMBER(IREG_LOG_TIME),          // format:UL, type:TIME
+    PREV_LONG_MEMBER(IREG_LOG_TOTAL),         // format:F, type:FLOAT
+    PREV_LONG_MEMBER(IREG_LOG_GTOTAL),        // format:F, type:FLOAT
+    PREV_LONG_MEMBER(IREG_LOG_EVENTS),        // format:U, type:U16
+    IREG_ESTATUS,                             // format:U, type:U16
+    IREG_LASTREGISTER                         // last input register mark
+};
+
+// format: U - unsigned, F - float, UL - unsigned long
+// type: FLOAT - float, BOOL - bool, ENUM - enum, TIME - UNIX time, I8 - integer 8bit, U8 - unsigned 8bit, U16 - unsigned 16bit, U32 - unsigned 32bit
+// values: range of values depending on the type
+enum
+{
+    HREG_CONTROL,                                        // format:U, type:U16, values:bitwise
+    HREG_PASSWORD,                                       // format:UL, type:U32, values:0 … 999999
+    PREV_LONG_MEMBER(HREG_interfaceRS485_slave_address), // format:U, type:U8, values:0 … 247
+    HREG_interfaceRS485_baudrate,                        // format:U, type:ENUM, values:0 - 1200, 1 - 2400, 2 - 4800, 3 - 9600, 4 - 14400, 5 - 19200, 6 - 28800, 7 - 38400, 8 - 57600, 9 - 115200
+    HREG_interfaceRS485_parity,                          // format:U, type:ENUM, values:0 - None, 1 - Even, 2 - Odd
+    HREG_interfaceRS485_stopbits,                        // format:U, type:BOOL, values:0 - 1, 1 - 2
+    HREG_interfaceRS485_delay,                           // format:U, type:U8, values:0 … 255
+    HREG_clock_time_zone,                                // format:U, type:I8,, values:-14 … 12
+    HREG_time_rtc,                                       // format:UL, type:TIME, values:UNIX time (UTC + 0)
+    PREV_LONG_MEMBER(HREG_multiplier_parameter),         // format:U, type:BOOL, values:0 - K-фaктop, 1 - Цeнa импульса
+    HREG_multiplier_units,                               // format:U, type:ENUM, values: 0 - Mиллилитp, 1 - Литp, 2 - Meтp кyбический
+    HREG_multiplier_value_average,                       // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_linearisation_points),         // format:U, type:U8, values:2 … 10
+    HREG_linearisation_method,                           // format:U, type:ENUM, values:0 - Bыключено, 1 - Линeйный, 2 - Cплaйн-A, 3 - Cплaйн-Б
+    HREG_linearisation_predict,                          // format:U, type:BOOL, values:0 - Bыключено, 1 - Bключено
+    HREG_meter_mode,                                     // format:U, type:ENUM, values:0 - Пpямoй, 1 - Peвepc-A, 2 - Peвepc-Б
+    HREG_meter_correction,                               // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_meter_qmax_lpm),               // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_serial_number),                // format:UL, type:U32, values:000000 … 999999
+    PREV_LONG_MEMBER(HREG_LP1),                          // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_LP2),                          // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_LP3),                          // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_LP4),                          // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_LP5),                          // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_LP6),                          // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_LP7),                          // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_LP8),                          // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_LP9),                          // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_LP10),                         // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_batcher_batch),                // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_batcher_preemption),           // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_batcher_overrun),              // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_aout_calibration_low),         // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_aout_calibration_high),        // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_LASTREGISTER)                  // last holding register mark
+};
+
+enum
+{
+    EMPTY,
+    HCTRL_SYSTEM_WRITE,     // password SYSTEM
+    HCTRL_METER_WRITE,      // password METER
+    HCTRL_BATCH_WRITE,      // password BATCHER ADVANCED
+    HCTRL_METER_LPFV_WRITE, // linearisation points forward value set - password METER
+    HCTRL_METER_LPFF_WRITE, // linearisation points forward frequenvy set - password METER
+    HCTRL_METER_LPRV_WRITE, // linearisation points reverse value set - password METER
+    HCTRL_METER_LPRF_WRITE, // linearisation points reverse frequency set - password METER
+    HCTRL_BATCHER_START,    // password BSTART
+    HCTRL_BATCHER_PAUSE,    // password BSTART
+    HCTRL_TOTAL_RESET,      // password RESET
+    HCTRL_GTOTAL_RESET,     // password ADVANCED
+    HCTRL_SERVICE_RESET,    // password SERVICE
+    HCTRL_METER_LPFV_READ,  // linearisation points forward value read
+    HCTRL_METER_LPFF_READ,  // linearisation points forward frequency read
+    HCTRL_METER_LPRV_READ,  // linearisation points reverse value read
+    HCTRL_METER_LPRF_READ,  // linearisation points reverse frequeny read
+    HCTRL_ALL_READ,         // read back
+    HCTRL_DATALOG_READ,     // no password
+    HCTRL_BACKUP_LOAD,      // password SYSTEM
+    HCTRL_BACKUP_SAVE,      // password SYSTEM
+    HCTRL_BACKUP_FACTORY,   // password SYSTEM
+};
+
+enum
+{
+    LOGSTATUS_END = 8, // Log end has been reached
+    LOGSTATUS_CRCERROR // CRC error in log record
+};
+
+enum
+{
+    DINPUTS_DOUT0,
+    DINPUTS_DOUT1,
+    DINPUTS_DOUT2,
+    DINPUTS_DI2,
+    DINPUTS_DI2_EN
+};
+/*----------------------------------------------------------------------------*/
+
+typedef union
+{
+    float number;
+    uint16_t words[2];
+} floatunion_t;
+
+typedef union
+{
+    uint32_t number;
+    uint16_t words[2];
+} longunion_t;
+/*----------------------------------------------------------------------------*/
+
+void taskSerial(void *pvParameters);
+/*----------------------------------------------------------------------------*/
+uint16_t inputRegisters[INPUT_REG_COUNT];
+uint16_t holdingRegisters[HOLDING_REG_COUNT];
+
+void modbusLongToRegister(uint32_t src, uint16_t *dst);
+uint32_t modbusRegisterToLong(uint16_t *src);
+void modbusFloatToRegister(float src, uint16_t *dst);
+float modbusRegisterToFloat(uint16_t *src);
+
+void modbusFloatToInputReg(float value, uint8_t index);
+
+void regToFloatCopy(uint16_t dest[], float source[], uint8_t count);
+void floatToRegCopy(float source[], uint16_t dest[], uint8_t count);
+
+#endif // !_MODBUS_

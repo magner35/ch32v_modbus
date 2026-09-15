@@ -10,7 +10,7 @@ bool soft_timer_uptime_overflow = 0;
  * @param inc_time increased time
  * @return None
  ******************************************************************************/
-inline void soft_timer_inc(uint32_t inc_time)
+inline void SoftTimerInc(uint32_t inc_time)
 {
     soft_timer_uptime += inc_time;
 }
@@ -22,9 +22,9 @@ inline void soft_timer_inc(uint32_t inc_time)
  * @param fn callback function
  * @return None
  ******************************************************************************/
-void soft_timer_init(soft_timer_t *p_soft_time,
-                     uint32_t interval,
-                     soft_timer_tick_cb_t fn)
+void SoftTimerInit(soft_timer_t *p_soft_time,
+                   uint32_t interval,
+                   soft_timer_tick_cb_t fn)
 {
     p_soft_time->interval = interval;
     p_soft_time->prev = soft_timer_uptime;
@@ -36,7 +36,7 @@ void soft_timer_init(soft_timer_t *p_soft_time,
  * @param p_soft_time software timer structure pointer
  * @return true: arrival time false: no arrival time
  ******************************************************************************/
-bool soft_timer_check(soft_timer_t *p_soft_time)
+bool SoftTimerCheck(soft_timer_t *p_soft_time)
 {
     // time change
     if (soft_timer_uptime == p_soft_time->prev)
@@ -79,9 +79,9 @@ bool soft_timer_check(soft_timer_t *p_soft_time)
  * @param fn callback function
  * @return None
  ******************************************************************************/
-void soft_timer_tick_callback(soft_timer_t *p_soft_time, soft_timer_tick_cb_t fn)
+void SoftTimerTickCallback(soft_timer_t *p_soft_time, soft_timer_tick_cb_t fn)
 {
-    if (!soft_timer_check(p_soft_time))
+    if (!SoftTimerCheck(p_soft_time))
         return;
 
     // Check whether the function pointer is null
@@ -102,6 +102,6 @@ void soft_timer_group_loop(soft_timer_t *p_soft_time, uint32_t len)
     uint32_t i = 0;
     for (i = 0; i < len; i++)
     {
-        soft_timer_check(p_soft_time);
+        SoftTimerCheck(p_soft_time);
     }
 }

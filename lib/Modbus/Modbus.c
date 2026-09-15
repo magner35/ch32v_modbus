@@ -46,9 +46,9 @@ unsigned int Tx_Current = 0;
 unsigned int Tx_CRC16 = 0xFFFF;
 RXTX_STATE Tx_State = RXTX_IDLE;
 volatile unsigned char Tx_Buf[MODBUS_TRANSMIT_BUFFER_SIZE];
-volatile unsigned int Tx_Buf_Size = 0;
-volatile unsigned int Tx_Index = 0;
-volatile unsigned int Tx_DelayCounter = 0;
+volatile uint8_t Tx_Buf_Size = 0;
+volatile uint8_t Tx_Index = 0;
+volatile uint8_t Tx_DelayCounter = 0;
 
 RXTX_DATA Rx_Data;
 unsigned int Rx_CRC16 = 0xFFFF;

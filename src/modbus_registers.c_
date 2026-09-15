@@ -1,0 +1,78 @@
+/*
+ * Created on Mon Jan 27 2025
+ *
+ * Copyright (c) 2025 by magner mr.jaedong@gmail.com
+ */
+
+#include "stdint.h"
+#include "modbus_registers.h"
+/*----------------------------------------------------------------------------*/
+
+void modbusFloatToInputReg(float value, uint8_t index)
+{
+    floatunion_t var;
+    var.number = value;
+    inputRegisters[index] = var.words[0];
+    inputRegisters[index + 1] = var.words[1];
+}
+/*----------------------------------------------------------------------------*/
+
+void modbusLongToRegister(uint32_t src, uint16_t *dst)
+{
+    longunion_t var;
+    var.number = src;
+    dst[0] = var.words[0];
+    dst[1] = var.words[1];
+}
+
+/*----------------------------------------------------------------------------*/
+uint32_t modbusRegisterToLong(uint16_t *src)
+{
+    longunion_t var;
+    var.words[0] = src[0];
+    var.words[1] = src[1];
+    return var.number;
+}
+/*----------------------------------------------------------------------------*/
+
+void modbusFloatToRegister(float src, uint16_t *dst)
+{
+    floatunion_t var;
+    var.number = src;
+    dst[0] = var.words[0];
+    dst[1] = var.words[1];
+}
+/*----------------------------------------------------------------------------*/
+
+float modbusRegisterToFloat(uint16_t *src)
+{
+    floatunion_t var;
+    var.words[0] = src[0];
+    var.words[1] = src[1];
+    return var.number;
+}
+/*----------------------------------------------------------------------------*/
+
+void floatToRegCopy(float source[], uint16_t dest[], uint8_t count)
+{
+    floatunion_t var;
+    for (uint8_t i = 0; i < count; i++)
+    {
+        var.number = source[i];
+        dest[i * 2] = var.words[0];
+        dest[i * 2 + 1] = var.words[1];
+    }
+}
+/*----------------------------------------------------------------------------*/
+
+void regToFloatCopy(uint16_t dest[], float source[], uint8_t count)
+{
+    floatunion_t var;
+    for (uint8_t i = 0; i < count; i++)
+    {
+        var.words[0] = dest[i * 2];
+        var.words[1] = dest[i * 2 + 1];
+        source[i] = var.number;
+    }
+}
+/*----------------------------------------------------------------------------*/

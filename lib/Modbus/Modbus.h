@@ -1,6 +1,7 @@
 /*
  * Modbus Version 1.0
  */
+#include <stdint.h>
 #include "ModbusPort.h"
 
 #ifndef __MODBUS__H
@@ -33,11 +34,10 @@ typedef struct
 
 extern RegStructure holdingRegisters[NUMBER_OF_OUTPUT_REGISTERS];
 extern volatile unsigned short ModbusTimerValue;
-
 extern volatile unsigned char Tx_Buf[];
-extern volatile unsigned int Tx_Buf_Size;
-extern volatile unsigned int Tx_Index;
-extern volatile unsigned int Tx_DelayCounter;
+extern volatile uint8_t Tx_Buf_Size;
+extern volatile uint8_t Tx_Index;
+extern volatile uint8_t Tx_DelayCounter;
 
 // Main Functions
 extern void InitModbus(unsigned char ModbusSlaveAddress);
