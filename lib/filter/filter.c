@@ -9,13 +9,6 @@
 #include <math.h>
 #include <stdint.h>
 #include <stddef.h>
-/* RTOS Scheduler include files. */
-#include "FreeRTOS.h"
-#include "task.h"
-#include "queue.h"
-#include "semphr.h"
-#include "timers.h"
-#include "event_groups.h"
 /* User files */
 #include "filter.h"
 /*----------------------------------------------------------------------------*/

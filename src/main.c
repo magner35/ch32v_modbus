@@ -1,3 +1,9 @@
+/*
+ * Created on Wed Sep 16 2026
+ *
+ * Copyright (c) 2026 by magner mr.jaedong@gmail.com
+ */
+
 #include "debug.h"
 #include "Modbus.h"
 #include "ModbusPort.h"
@@ -13,7 +19,6 @@
 /* Global Variable */
 soft_timer_t test_timer;
 soft_timer_t timer_100ms;
-volatile uint8_t aaa1 = 0;
 
 int main(void)
 {
@@ -52,7 +57,7 @@ int main(void)
             holdingRegisters[7].ActValue = sizeof(short);
             holdingRegisters[8].ActValue = sizeof(uint64_t);
             holdingRegisters[9].ActValue = sizeof(long long);
-            
+
             inputRegisters[0].ActValue++;
             inputRegisters[1].ActValue--;
             inputRegisters[2].ActValue++;
@@ -64,16 +69,7 @@ int main(void)
             inputRegisters[8].ActValue++;
             inputRegisters[9].ActValue--;
 
-            if (aaa1)
-            {
-                aaa1 = 0;
-                GPIO_SetBits(LED1_GPIO_PORT, LED1_GPIO_PIN);
-            }
-            else
-            {
-                aaa1 = 1;
-                GPIO_ResetBits(LED1_GPIO_PORT, LED1_GPIO_PIN);
-            }
+            LED1_GPIO_PORT->OUTDR ^= LED1_GPIO_PIN;
         }
     }
 

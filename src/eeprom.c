@@ -1,3 +1,9 @@
+/*
+ * Created on Wed Sep 16 2026
+ *
+ * Copyright (c) 2026 by magner mr.jaedong@gmail.com
+ */
+
 #include "ch32v00x.h"
 #include "eeprom.h"
 
