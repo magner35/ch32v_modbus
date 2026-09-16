@@ -1,5 +1,5 @@
-#include "debug.h"
 #include "Modbus.h"
+#include "debug.h"
 #include "ModbusPort.h"
 
 /*******************************ModBus Functions*******************************/
@@ -57,6 +57,9 @@ unsigned char Rx_Data_Available = FALSE;
 
 volatile unsigned short ModbusTimerValue = 0;
 
+RegStructure holdingRegisters[NUMBER_OF_HOLDING_REGISTERS];
+RegStructure inputRegisters[NUMBER_OF_INPUT_REGISTERS];
+
 /****************End of Slave Transmit and Receive Variables*******************/
 
 /*
@@ -78,7 +81,6 @@ void CRC16(const unsigned char Data, unsigned int *CRC)
             *CRC >>= 1;
     }
 }
-
 /******************************************************************************/
 
 /*
@@ -93,7 +95,6 @@ unsigned char DoSlaveTX(void)
     USART_ITConfig(USART1, USART_IT_TXE, ENABLE);
     return TRUE;
 }
-
 /******************************************************************************/
 
 /*
@@ -105,14 +106,11 @@ unsigned char SendMessage(void)
 {
     if (Tx_State != RXTX_IDLE)
         return FALSE;
-
     Tx_Current = 0;
     Tx_DelayCounter = 0;
     Tx_State = RXTX_START;
-
     return TRUE;
 }
-
 /******************************************************************************/
 
 /*
@@ -128,7 +126,43 @@ void HandleModbusError(char ErrorCode)
     Tx_Data.DataBuf[0] = ErrorCode;
     SendMessage();
 }
+/******************************************************************************/
 
+/*
+ * Function Name        : HandleModbusReadInputRegisters
+ * @How to use          : Modbus function 04 - Read input registers
+ */
+#if MODBUS_READ_INPUT_REGISTERS_ENABLED > 0
+void HandleModbusReadInputRegisters(void)
+{
+    unsigned int StartAddress = 0;
+    unsigned int NumberOfRegisters = 0;
+    unsigned int i = 0;
+    // The message contains the requested start address and number of registers
+    StartAddress = ((unsigned int)(Rx_Data.DataBuf[0]) << 8) + (unsigned int)(Rx_Data.DataBuf[1]);
+    NumberOfRegisters = ((unsigned int)(Rx_Data.DataBuf[2]) << 8) + (unsigned int)(Rx_Data.DataBuf[3]);
+    // If it is bigger than RegisterNumber return error to Modbus Master
+    if ((StartAddress + NumberOfRegisters) > NUMBER_OF_INPUT_REGISTERS)
+        HandleModbusError(ERROR_CODE_02);
+    else
+    {
+        // Initialise the output buffer. The first byte in the buffer says how many registers we have read
+        Tx_Data.Function = MODBUS_READ_INPUT_REGISTERS;
+        Tx_Data.Address = MODBUS_SLAVE_ADDRESS;
+        Tx_Data.DataLen = 1;
+        Tx_Data.DataBuf[0] = 0;
+        for (i = 0; i < NumberOfRegisters; i++)
+        {
+            unsigned short CurrentData = inputRegisters[StartAddress + i].ActValue;
+            Tx_Data.DataBuf[Tx_Data.DataLen] = (unsigned char)((CurrentData & 0xFF00) >> 8);
+            Tx_Data.DataBuf[Tx_Data.DataLen + 1] = (unsigned char)(CurrentData & 0xFF);
+            Tx_Data.DataLen += 2;
+            Tx_Data.DataBuf[0] = Tx_Data.DataLen - 1;
+        }
+        SendMessage();
+    }
+}
+#endif
 /******************************************************************************/
 
 /*
@@ -141,13 +175,11 @@ void HandleModbusReadHoldingRegisters(void)
     unsigned int StartAddress = 0;
     unsigned int NumberOfRegisters = 0;
     unsigned int i = 0;
-
     // The message contains the requested start address and number of registers
     StartAddress = ((unsigned int)(Rx_Data.DataBuf[0]) << 8) + (unsigned int)(Rx_Data.DataBuf[1]);
     NumberOfRegisters = ((unsigned int)(Rx_Data.DataBuf[2]) << 8) + (unsigned int)(Rx_Data.DataBuf[3]);
-
     // If it is bigger than RegisterNumber return error to Modbus Master
-    if ((StartAddress + NumberOfRegisters) > NUMBER_OF_OUTPUT_REGISTERS)
+    if ((StartAddress + NumberOfRegisters) > NUMBER_OF_HOLDING_REGISTERS)
         HandleModbusError(ERROR_CODE_02);
     else
     {
@@ -156,26 +188,22 @@ void HandleModbusReadHoldingRegisters(void)
         Tx_Data.Address = MODBUS_SLAVE_ADDRESS;
         Tx_Data.DataLen = 1;
         Tx_Data.DataBuf[0] = 0;
-
         for (i = 0; i < NumberOfRegisters; i++)
         {
             unsigned short CurrentData = holdingRegisters[StartAddress + i].ActValue;
-
             Tx_Data.DataBuf[Tx_Data.DataLen] = (unsigned char)((CurrentData & 0xFF00) >> 8);
             Tx_Data.DataBuf[Tx_Data.DataLen + 1] = (unsigned char)(CurrentData & 0xFF);
             Tx_Data.DataLen += 2;
             Tx_Data.DataBuf[0] = Tx_Data.DataLen - 1;
         }
-
         SendMessage();
     }
 }
 #endif
-
 /******************************************************************************/
 
 /*
- * Function Name        : HandleModbusReadInputRegisters
+ * Function Name        : HandleModbusWriteSingleRegister
  * @How to use          : Modbus function 06 - Write single register
  */
 #if MODBUSWRITE_SINGLE_REGISTER_ENABLED > 0
@@ -185,17 +213,14 @@ void HandleModbusWriteSingleRegister(void)
     unsigned int Address = 0;
     unsigned int Value = 0;
     unsigned char i = 0;
-
     // The message contains the requested start address and number of registers
     Address = ((unsigned int)(Rx_Data.DataBuf[0]) << 8) + (unsigned int)(Rx_Data.DataBuf[1]);
     Value = ((unsigned int)(Rx_Data.DataBuf[2]) << 8) + (unsigned int)(Rx_Data.DataBuf[3]);
-
     // Initialise the output buffer. The first byte in the buffer says how many registers we have read
     Tx_Data.Function = MODBUS_WRITE_SINGLE_REGISTER;
     Tx_Data.Address = MODBUS_SLAVE_ADDRESS;
     Tx_Data.DataLen = 4;
-
-    if (Address >= NUMBER_OF_OUTPUT_REGISTERS)
+    if (Address >= NUMBER_OF_HOLDING_REGISTERS)
         HandleModbusError(ERROR_CODE_02);
     else
     {
@@ -204,11 +229,9 @@ void HandleModbusWriteSingleRegister(void)
         for (i = 0; i < 4; ++i)
             Tx_Data.DataBuf[i] = Rx_Data.DataBuf[i];
     }
-
     SendMessage();
 }
 #endif
-
 /******************************************************************************/
 
 /*
@@ -224,14 +247,12 @@ void HandleModbusWriteMultipleRegisters(void)
     unsigned int NumberOfRegisters = 0;
     unsigned char i = 0;
     unsigned int Value = 0;
-
     // The message contains the requested start address and number of registers
     StartAddress = ((unsigned int)(Rx_Data.DataBuf[0]) << 8) + (unsigned int)(Rx_Data.DataBuf[1]);
     NumberOfRegisters = ((unsigned int)(Rx_Data.DataBuf[2]) << 8) + (unsigned int)(Rx_Data.DataBuf[3]);
     // ByteCount = Rx_Data.DataBuf[4];
-
     // If it is bigger than RegisterNumber return error to Modbus Master
-    if ((StartAddress + NumberOfRegisters) > NUMBER_OF_OUTPUT_REGISTERS)
+    if ((StartAddress + NumberOfRegisters) > NUMBER_OF_HOLDING_REGISTERS)
         HandleModbusError(ERROR_CODE_02);
     else
     {
@@ -243,19 +264,16 @@ void HandleModbusWriteMultipleRegisters(void)
         Tx_Data.DataBuf[1] = Rx_Data.DataBuf[1];
         Tx_Data.DataBuf[2] = Rx_Data.DataBuf[2];
         Tx_Data.DataBuf[3] = Rx_Data.DataBuf[3];
-
         // Output data buffer is exact copy of input buffer
         for (i = 0; i < NumberOfRegisters; i++)
         {
             Value = (Rx_Data.DataBuf[5 + 2 * i] << 8) + (Rx_Data.DataBuf[6 + 2 * i]);
             holdingRegisters[StartAddress + i].ActValue = Value;
         }
-
         SendMessage();
     }
 }
 #endif
-
 /******************************************************************************/
 
 /*
@@ -266,12 +284,9 @@ void HandleModbusWriteMultipleRegisters(void)
 unsigned char RxDataAvailable(void)
 {
     unsigned char Result = Rx_Data_Available;
-
     Rx_Data_Available = FALSE;
-
     return Result;
 }
-
 /******************************************************************************/
 
 /*
@@ -288,10 +303,8 @@ unsigned char CheckRxTimeout(void)
         ReceiveCounter = 0;
         return TRUE;
     }
-
     return FALSE;
 }
-
 /******************************************************************************/
 
 /*
@@ -304,7 +317,6 @@ unsigned char CheckRxTimeout(void)
 unsigned char CheckModbusBufferComplete(void)
 {
     int ExpectedReceiveCount = 0;
-
     if (ReceiveCounter > 4)
     {
         if (ReceiveBuffer[0] == MODBUS_SLAVE_ADDRESS)
@@ -331,15 +343,12 @@ unsigned char CheckModbusBufferComplete(void)
     }
     else
         return DATA_NOT_READY;
-
     if (ReceiveCounter == ExpectedReceiveCount)
     {
         return DATA_READY;
     }
-
     return DATA_NOT_READY;
 }
-
 /******************************************************************************/
 
 /*
@@ -350,9 +359,7 @@ void RxRTU(void)
 {
     unsigned char i;
     unsigned char ReceiveBufferControl = 0;
-
     ReceiveBufferControl = CheckModbusBufferComplete();
-
     if (ReceiveBufferControl == DATA_READY)
     {
         Rx_Data.Address = ReceiveBuffer[0];
@@ -360,19 +367,15 @@ void RxRTU(void)
         CRC16(Rx_Data.Address, &Rx_CRC16);
         Rx_Data.Function = ReceiveBuffer[1];
         CRC16(Rx_Data.Function, &Rx_CRC16);
-
         Rx_Data.DataLen = 0;
 
         for (i = 2; i < ReceiveCounter; i++)
             Rx_Data.DataBuf[Rx_Data.DataLen++] = ReceiveBuffer[i];
 
         Rx_State = RXTX_DATABUF;
-
         ReceiveCounter = 0;
     }
-
     CheckRxTimeout();
-
     if ((Rx_State == RXTX_DATABUF) && (Rx_Data.DataLen >= 2))
     {
         // Finish off our CRC check
@@ -381,17 +384,14 @@ void RxRTU(void)
         {
             CRC16(Rx_Data.DataBuf[i], &Rx_CRC16);
         }
-
         if (((unsigned int)Rx_Data.DataBuf[Rx_Data.DataLen] + ((unsigned int)Rx_Data.DataBuf[Rx_Data.DataLen + 1] << 8)) == Rx_CRC16)
         {
             // Valid message!
             Rx_Data_Available = TRUE;
         }
-
         Rx_State = RXTX_IDLE;
     }
 }
-
 /******************************************************************************/
 
 /*
@@ -405,7 +405,6 @@ void TxRTU(void)
     CRC16(Tx_Data.Address, &Tx_CRC16);
     Tx_Buf[Tx_Buf_Size++] = Tx_Data.Function;
     CRC16(Tx_Data.Function, &Tx_CRC16);
-
     for (Tx_Current = 0; Tx_Current < Tx_Data.DataLen; Tx_Current++)
     {
         Tx_Buf[Tx_Buf_Size++] = Tx_Data.DataBuf[Tx_Current];
@@ -413,11 +412,9 @@ void TxRTU(void)
     }
     Tx_Buf[Tx_Buf_Size++] = Tx_CRC16 & 0x00FF;
     Tx_Buf[Tx_Buf_Size++] = (Tx_CRC16 & 0xFF00) >> 8;
-
     DoSlaveTX();
     Tx_State = RXTX_IDLE;
 }
-
 /******************************************************************************/
 
 /*
@@ -433,15 +430,20 @@ void ProcessModbus(void)
             TxRTU();
         }
     }
-
-    RxRTU(); // Call this function every cycle
-
+    RxRTU();               // Call this function every cycle
     if (RxDataAvailable()) // If data is ready enter this!
     {
         if (Rx_Data.Address == MODBUS_SLAVE_ADDRESS) // Is Data for us?
         {
             switch (Rx_Data.Function) // Data is for us but which function?
             {
+#if MODBUS_READ_INPUT_REGISTERS_ENABLED > 0
+            case MODBUS_READ_INPUT_REGISTERS:
+            {
+                HandleModbusReadInputRegisters();
+                break;
+            }
+#endif
 #if MODBUS_READ_HOLDING_REGISTERS_ENABLED > 0
             case MODBUS_READ_HOLDING_REGISTERS:
             {
@@ -472,7 +474,6 @@ void ProcessModbus(void)
         }
     }
 }
-
 /******************************************************************************/
 
 /*
@@ -482,9 +483,7 @@ void ProcessModbus(void)
 void InitModbus(unsigned char ModbusSlaveAddress)
 {
     MODBUS_SLAVE_ADDRESS = ModbusSlaveAddress;
-
     ModBus_UART_Initialise();
-    ModBus_TIMER_Initialise();
+    Timer_Initialise();
 }
-
 /******************************************************************************/

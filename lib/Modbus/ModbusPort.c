@@ -1,16 +1,13 @@
 #include "ModbusPort.h"
-
-// This port file for CH32V microcontrollers!
 #include "debug.h"
 
 // Modbus RTU Variables
 volatile unsigned char ReceiveBuffer[MODBUS_RECEIVE_BUFFER_SIZE]; // Buffer to collect data from hardware
 volatile unsigned char ReceiveCounter = 0;                        // Collected data number
 
-// UART Initialize for Microconrollers, yes you can use another phsycal layer!
+// UART Initialize
 void ModBus_UART_Initialise(void)
 {
-    // Insert UART Init Code Here
     GPIO_InitTypeDef GPIO_InitStructure = {0};
 
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOD, ENABLE);
@@ -54,26 +51,21 @@ void ModBus_UART_Initialise(void)
     USART_Cmd(USART1, ENABLE);
 }
 
-// Timer Initialize for Modbus, 1ms Timer will be good for us!
-void ModBus_TIMER_Initialise(void)
+// Timer Initialize 1ms
+void Timer_Initialise(void)
 {
-    // Insert TMR Init Code Here
     RCC->APB2PCENR |= RCC_APB2Periph_TIM1;
     TIM1->CTLR1 |= TIM_ARPE;
     TIM1->CTLR2 = TIM_MMS_1;
-
     // count up per 1sec
     // 48000 * 1000 = 48000000
     TIM1->ATRLR = 480;
     TIM1->PSC = 100 - 1;
     TIM1->RPTCR = 0;
-
     NVIC_EnableIRQ(TIM1_UP_IRQn);
-
     TIM1->INTFR = ~TIM_FLAG_Update;   // 0x0001 // 10.4.5 Interrupt Status Register (TIM1_INTFR)
     TIM1->SWEVGR = TIM_UG;            // 0x0001 // 10.4.6 Event Generation Register (TIM1_SWEVGR)
     TIM1->DMAINTENR |= TIM_IT_Update; // 0x0001 // 10.4.4 DMA/Interrupt Enable Register (TIM1_DMAINTENR)
-
     // TIM1 Enable
     TIM1->CTLR1 |= TIM_CEN;
 }

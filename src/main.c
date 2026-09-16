@@ -1,8 +1,11 @@
 #include "debug.h"
 #include "Modbus.h"
+#include "ModbusPort.h"
+#include "modbus_registers.h"
 #include "board.h"
 #include "soft_timer.h"
 #include "eeprom.h"
+#include "meter.h"
 
 /* Global define */
 #define MODBUS_ID 0x1
@@ -11,21 +14,6 @@
 soft_timer_t test_timer;
 soft_timer_t timer_100ms;
 volatile uint8_t aaa1 = 0;
-volatile uint8_t aaa2 = 0;
-
-void timer_100ms_callback(void)
-{
-    if (aaa2)
-    {
-        aaa2 = 0;
-        GPIO_SetBits(LED2_GPIO_PORT, LED2_GPIO_PIN);
-    }
-    else
-    {
-        aaa2 = 1;
-        GPIO_ResetBits(LED2_GPIO_PORT, LED2_GPIO_PIN);
-    }
-}
 
 int main(void)
 {
@@ -64,6 +52,17 @@ int main(void)
             holdingRegisters[7].ActValue = sizeof(short);
             holdingRegisters[8].ActValue = sizeof(uint64_t);
             holdingRegisters[9].ActValue = sizeof(long long);
+            
+            inputRegisters[0].ActValue++;
+            inputRegisters[1].ActValue--;
+            inputRegisters[2].ActValue++;
+            inputRegisters[3].ActValue--;
+            inputRegisters[4].ActValue++;
+            inputRegisters[5].ActValue--;
+            inputRegisters[6].ActValue++;
+            inputRegisters[7].ActValue--;
+            inputRegisters[8].ActValue++;
+            inputRegisters[9].ActValue--;
 
             if (aaa1)
             {

@@ -4,12 +4,10 @@
  * Copyright (c) 2025 by magner mr.jaedong@gmail.com
  */
 
+#include "modbus_registers.h"
 #include <stdint.h>
 #include <string.h>
-#include "modbus_registers.h"
 
-uint16_t inputRegisters[INPUT_REG_COUNT];
-uint16_t holdingRegisters[HOLDING_REG_COUNT];
 /*----------------------------------------------------------------------------*/
 
 void modbusLongToRegister(uint32_t src, uint16_t *dst)
@@ -72,19 +70,6 @@ void regToFloatCopy(uint16_t dest[], float source[], uint8_t count)
 }
 /*----------------------------------------------------------------------------*/
 
-/*----------------------------------------------------------------------------*/
-// Запись float в inputRegisters по индексу (занимает 2 регистра)
-void modbusFloatToInputReg_(float value, uint8_t index)
-{
-    uint32_t temp;
-    memcpy(&temp, &value, sizeof(float));
-
-    // Стандартный Modbus Big-Endian (Word Swap): старшее слово первое
-    inputRegisters[index] = (temp >> 16) & 0xFFFF;
-    inputRegisters[index + 1] = temp & 0xFFFF;
-}
-
-/*----------------------------------------------------------------------------*/
 // Запись uint32_t в два регистра
 void modbusLongToRegister_(uint32_t src, uint16_t *dst)
 {

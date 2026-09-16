@@ -2,11 +2,10 @@
 #define _MODBUS_
 
 #include <stdint.h>
-/*----------------------------------------------------------------------------*/
 
 #define PREV_LONG_MEMBER(NAME) NAME##_dummy, NAME = NAME##_dummy - 1 + 2 // enum with step
-#define INPUT_REG_COUNT IREG_LASTREGISTER
-#define HOLDING_REG_COUNT HREG_LASTREGISTER
+#define NUMBER_OF_INPUT_REGISTERS IREG_LASTREGISTER
+#define NUMBER_OF_HOLDING_REGISTERS HREG_LASTREGISTER
 /*----------------------------------------------------------------------------*/
 
 enum
@@ -105,21 +104,6 @@ enum
     HCTRL_BACKUP_SAVE,      // password SYSTEM
     HCTRL_BACKUP_FACTORY,   // password SYSTEM
 };
-
-enum
-{
-    LOGSTATUS_END = 8, // Log end has been reached
-    LOGSTATUS_CRCERROR // CRC error in log record
-};
-
-enum
-{
-    DINPUTS_DOUT0,
-    DINPUTS_DOUT1,
-    DINPUTS_DOUT2,
-    DINPUTS_DI2,
-    DINPUTS_DI2_EN
-};
 /*----------------------------------------------------------------------------*/
 
 typedef union
@@ -133,9 +117,6 @@ typedef union
     uint32_t number;
     uint16_t words[2];
 } longunion_t;
-/*----------------------------------------------------------------------------*/
-
-void taskSerial(void *pvParameters);
 /*----------------------------------------------------------------------------*/
 
 void modbusLongToRegister(uint32_t src, uint16_t *dst);
