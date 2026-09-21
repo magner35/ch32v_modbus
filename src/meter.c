@@ -35,17 +35,12 @@ volatile uint64_t sum_period_ticks = 0; /* uint64 на случай больши
 volatile uint32_t last_freq_hz = 0;
 
 #define MIN_PULSES_FOR_AVG 10 /* минимум для усреднения */
-#define MAX_WINDOW_TICKS 10   /* макс. окно = 1 с */
-
-volatile uint32_t window_start_tick = 0;
+#define MAX_WINDOW_CALLS 10   /* макс. окно = 1 с */
 
 void timer_100ms_callback(void)
 {
-    static uint8_t i = 0; // counter
-
-    uint32_t now = i; /* или свой счётчик */
-    uint32_t elapsed = now - window_start_tick;
-    i++;
+    static uint8_t counter = 0; // counter
+    counter++;
 
     __disable_irq();
     uint32_t cnt = valid_pulse_count;
@@ -53,7 +48,7 @@ void timer_100ms_callback(void)
     __enable_irq();
 
     /* Ждём, пока наберётся достаточно импульсов ИЛИ истечёт время */
-    if (cnt < MIN_PULSES_FOR_AVG && elapsed < MAX_WINDOW_TICKS)
+    if (cnt < MIN_PULSES_FOR_AVG && counter < MAX_WINDOW_CALLS)
     {
         return; /* продолжаем копить */
     }
@@ -62,8 +57,9 @@ void timer_100ms_callback(void)
     __disable_irq();
     valid_pulse_count = 0;
     sum_period_ticks = 0;
-    window_start_tick = i;
     __enable_irq();
+
+    counter = 0;
 
     uint32_t freq_hz = 0;
     if (cnt > 0)
