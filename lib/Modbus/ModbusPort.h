@@ -18,9 +18,8 @@ extern void Timer_Initialise(void);
 
 extern void ModBus_TimerValues(void);
 
-// Serial port transceiver enable
-#define RS485_DE_GPIO_PORT (GPIOD)
-#define RS485_DE_GPIO_PIN (GPIO_Pin_4)
+#define RS485_DE_GPIO_PORT (GPIOC)
+#define RS485_DE_GPIO_PIN (GPIO_Pin_3)
 
 void set_rs485_de_enable(void);
 void set_rs485_de_disable(void);

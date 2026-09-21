@@ -80,7 +80,7 @@ int main(void)
 
             // result_float = interpolationLinear(xValues, yValues, linearisation_points, frequency, linearisation_predict); // 60 us
             // result_float = interpolationCatmullSpline(xValues, yValues, linearisation_points, frequency, linearisation_predict); // 256 us
-            // result_float = interpolationConstrainedSpline(xValues, yValues, linearisation_points, frequency, linearisation_predict); // 690 us
+            result_float = interpolationConstrainedSpline(xValues, yValues, linearisation_points, frequency, linearisation_predict); // 690 us
             GPIO_ResetBits(LED2_GPIO_PORT, LED2_GPIO_PIN);
 
             modbusLLToRegister(result_int, (uint16_t *)&holdingRegisters[0].ActValue);
@@ -92,6 +92,7 @@ int main(void)
             volatile uint16_t cnt1 = TIM1->CNT;
             volatile uint16_t cnt2 = TIM2->CNT;
             holdingRegisters[8].ActValue = cnt1;
+
             holdingRegisters[9].ActValue = cnt2;
 
             inputRegisters[0].ActValue++;

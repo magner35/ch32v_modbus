@@ -10,6 +10,33 @@
 #include "board.h"
 #include "interpolation.h"
 
+/* ── Тайминги ── */
+#define TIM_CLK_HZ 48000000UL
+#define TIM_PRESCALER 1 /* PSC=0 → 48 МГц */
+#define TIM_TICK_HZ (TIM_CLK_HZ / TIM_PRESCALER)
+
+/* ── Пороги фильтрации (целочисленные, без float!) ── */
+#define FREQ_MIN_HZ 10UL
+#define FREQ_MAX_HZ 4500UL
+/* duty ∈ [0.10 ; 0.90]  ⇔  pulse*10 ∈ [period ; period*9] */
+#define DUTY_NUM_MIN 1UL
+#define DUTY_NUM_MAX 9UL
+
+/* Периоды в тиках, соответствующие порогам частоты */
+#define PERIOD_MAX_TICKS (TIM_TICK_HZ / FREQ_MIN_HZ) /* 4 800 000 */
+#define PERIOD_MIN_TICKS (TIM_TICK_HZ / FREQ_MAX_HZ) /*    10 666 */
+
+/* ── Счётчики ISR → main (volatile!) ── */
+volatile uint32_t valid_pulse_count = 0;
+volatile uint64_t sum_period_ticks = 0; /* uint64 на случай больших сумм */
+
+/* ── Флаг 100 мс задачи ── */
+volatile uint8_t flag_100ms = 0;
+
+/* ── Результаты 100 мс задачи ── */
+volatile uint32_t last_freq_hz = 0;
+volatile uint32_t last_valid_cnt = 0;
+
 void timer_100ms_callback(void)
 {
     // LED2_GPIO_PORT->OUTDR ^= LED2_GPIO_PIN;
@@ -27,4 +54,60 @@ void TIM1_UP_IRQHandler()
     {
         TIM1->INTFR = ~TIM_FLAG_Update;
     }
+}
+
+void BoardTimer2Init(void)
+{
+    // Инициализация TIM2 Input Capture
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+    TIM_TimeBaseInitTypeDef TIM_TimeBaseStruct = {0};
+    TIM_ICInitTypeDef TIM_ICStruct = {0};
+    NVIC_InitTypeDef NVIC_InitStruct = {0};
+
+    /* 1. Тактирование GPIOA/GPIOD и TIM2 */
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOD, ENABLE);
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
+
+    /* 2. PD4 → Floating Input (TIM2_CH1 / TI1) */
+    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_4;
+    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_Init(GPIOD, &GPIO_InitStruct);
+
+    /* 3. TimeBase: PSC=47 → 1 МГц, ARR=0xFFFF */
+    TIM_TimeBaseStruct.TIM_Period = 0xFFFF;
+    TIM_TimeBaseStruct.TIM_Prescaler = 48 - 1;
+    TIM_TimeBaseStruct.TIM_ClockDivision = TIM_CKD_DIV1;
+    TIM_TimeBaseStruct.TIM_CounterMode = TIM_CounterMode_Up;
+    TIM_TimeBaseStruct.TIM_RepetitionCounter = 0;
+    TIM_TimeBaseInit(TIM2, &TIM_TimeBaseStruct);
+
+    /* 4. CH1: Input Capture, TI1, rising edge, без делителя, фильтр N=8 */
+    TIM_ICStruct.TIM_Channel = TIM_Channel_1;
+    TIM_ICStruct.TIM_ICPolarity = TIM_ICPolarity_Rising;
+    TIM_ICStruct.TIM_ICSelection = TIM_ICSelection_DirectTI; // CC1S = 01
+    TIM_ICStruct.TIM_ICPrescaler = TIM_ICPSC_DIV1;
+    TIM_ICStruct.TIM_ICFilter = 0x04; // N=8, fS=fDTS/2
+    TIM_ICInit(TIM2, &TIM_ICStruct);
+
+    /* 5. CH2: Input Capture, ТОЖЕ TI1 (cross-capture), falling edge */
+    TIM_ICStruct.TIM_Channel = TIM_Channel_2;
+    TIM_ICStruct.TIM_ICPolarity = TIM_ICPolarity_Falling;
+    TIM_ICStruct.TIM_ICSelection = TIM_ICSelection_IndirectTI; // CC2S = 10 → TI1
+    TIM_ICStruct.TIM_ICPrescaler = TIM_ICPSC_DIV1;
+    TIM_ICStruct.TIM_ICFilter = 0x04;
+    TIM_ICInit(TIM2, &TIM_ICStruct);
+
+    /* 6. Разрешаем прерывания CC1, CC2, Update */
+    TIM_ITConfig(TIM2, TIM_IT_CC1 | TIM_IT_CC2 | TIM_IT_Update, ENABLE);
+
+    /* 7. NVIC */
+    NVIC_InitStruct.NVIC_IRQChannel = TIM2_IRQn;
+    NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 1;
+    NVIC_InitStruct.NVIC_IRQChannelSubPriority = 1;
+    NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
+    NVIC_Init(&NVIC_InitStruct);
+
+    /* 8. Старт таймера */
+    TIM_Cmd(TIM2, ENABLE);
 }

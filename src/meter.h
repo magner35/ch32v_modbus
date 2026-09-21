@@ -5,3 +5,4 @@
 
 void timer_100ms_callback(void);
 void timer_10ms_callback(void);
+void BoardTimer2Init(void);
