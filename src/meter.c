@@ -42,6 +42,38 @@ void timer_100ms_callback(void)
     // LED2_GPIO_PORT->OUTDR ^= LED2_GPIO_PIN;
 }
 
+void Task_100ms(void)
+{
+    /* ── Атомарно снять снапшот и обнулить счётчики ── */
+    __disable_irq();
+    uint32_t cnt = valid_pulse_count;
+    uint64_t sum = sum_period_ticks;
+    valid_pulse_count = 0;
+    sum_period_ticks = 0;
+    __enable_irq();
+
+    /* ── Расчёт частоты через усреднённый период ── */
+    if (cnt > 0)
+    {
+        uint32_t avg_period = (uint32_t)(sum / cnt); /* тики */
+        uint32_t freq_hz = TIM_TICK_HZ / avg_period; /* Гц    */
+
+        last_freq_hz = freq_hz;
+        last_valid_cnt = cnt;
+
+        /* Здесь можно:
+         *   - вывести в UART
+         *   - обновить дисплей
+         *   - передать по Modbus и т.д.
+         */
+    }
+    else
+    {
+        last_freq_hz = 0; /* нет валидных импульсов за окно */
+        last_valid_cnt = 0;
+    }
+}
+
 void timer_10ms_callback(void)
 {
     GEN_OUT_PORT->OUTDR ^= GEN_OUT_PIN;
@@ -110,4 +142,77 @@ void BoardTimer2Init(void)
 
     /* 8. Старт таймера */
     TIM_Cmd(TIM2, ENABLE);
+}
+
+/* ── Файл-скоуп переменные ISR ── */
+static volatile uint16_t prev_rising = 0;
+static volatile uint32_t overflow_cnt_rising = 0;
+static volatile uint32_t overflow_cnt_falling = 0;
+static volatile uint32_t last_period_ticks = 0;
+#define MAX_OVF_CNT 10000UL
+
+void TIM2_IRQHandler(void) __attribute__((interrupt("WCH-Interrupt-fast")));
+void TIM2_IRQHandler(void)
+{
+    /* ── Update ── */
+    if (TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET)
+    {
+        if (overflow_cnt_rising < MAX_OVF_CNT)
+            overflow_cnt_rising++;
+        if (overflow_cnt_falling < MAX_OVF_CNT)
+            overflow_cnt_falling++;
+        TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
+    }
+
+    /* ── CH1: rising ── */
+    if (TIM_GetITStatus(TIM2, TIM_IT_CC1) != RESET)
+    {
+        uint16_t cap = TIM_GetCapture1(TIM2);
+        last_period_ticks = (uint32_t)overflow_cnt_rising * 0x10000UL + (uint32_t)(cap - prev_rising);
+
+        overflow_cnt_rising = 0;
+        overflow_cnt_falling = 0;
+        prev_rising = cap;
+
+        TIM_ClearITPendingBit(TIM2, TIM_IT_CC1);
+    }
+
+    /* ── CH2: falling ── */
+    if (TIM_GetITStatus(TIM2, TIM_IT_CC2) != RESET)
+    {
+        uint16_t cap = TIM_GetCapture2(TIM2);
+        uint32_t pulse_ticks = (uint32_t)overflow_cnt_falling * 0x10000UL + (uint32_t)(cap - prev_rising);
+        uint32_t period = last_period_ticks;
+
+        /* ══════════════════════════════════════════════
+         *  ФИЛЬТРАЦИЯ (целочисленная, без float!)
+         * ══════════════════════════════════════════════ */
+        uint8_t valid = 0;
+        if (period != 0)
+        {
+            /* 1. Частота: PERIOD_MIN_TICKS ≤ period ≤ PERIOD_MAX_TICKS */
+            if ((period >= PERIOD_MIN_TICKS) && (period <= PERIOD_MAX_TICKS))
+            {
+                /* 2. Скважность: 0.10 ≤ duty ≤ 0.90
+                 *    duty = pulse/period
+                 *    duty ≥ 0.10  ⇔  pulse * 10 ≥ period
+                 *    duty ≤ 0.90  ⇔  pulse * 10 ≤ period * 9
+                 */
+                uint32_t p10 = pulse_ticks * 10UL;
+                if ((p10 >= period) && (p10 <= period * DUTY_NUM_MAX))
+                {
+                    valid = 1;
+                }
+            }
+        }
+
+        /* ── Накопление для 100 мс задачи ── */
+        if (valid)
+        {
+            valid_pulse_count++;
+            sum_period_ticks += period;
+        }
+
+        TIM_ClearITPendingBit(TIM2, TIM_IT_CC2);
+    }
 }
