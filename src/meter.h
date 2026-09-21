@@ -4,3 +4,4 @@
 #endif // !_METER_H_
 
 void timer_100ms_callback(void);
+void timer_10ms_callback(void);

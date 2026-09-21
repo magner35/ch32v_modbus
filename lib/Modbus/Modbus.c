@@ -484,6 +484,5 @@ void InitModbus(unsigned char ModbusSlaveAddress)
 {
     MODBUS_SLAVE_ADDRESS = ModbusSlaveAddress;
     ModBus_UART_Initialise();
-    Timer_Initialise();
 }
 /******************************************************************************/

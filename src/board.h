@@ -6,13 +6,19 @@
 // Output signal
 #define LED1_GPIO_PORT (GPIOD)
 #define LED1_GPIO_PIN (GPIO_Pin_3)
+
 #define LED2_GPIO_PORT (GPIOD)
 #define LED2_GPIO_PIN (GPIO_Pin_2)
+
+#define GEN_OUT_PORT (GPIOC)
+#define GEN_OUT_PIN (GPIO_Pin_4)
 
 // Serial port transceiver enable
 #define RS485_DE_GPIO_PORT (GPIOD)
 #define RS485_DE_GPIO_PIN (GPIO_Pin_4)
 
 void BoardGpioInit(void);
+void BoardTimer1Init(void);
+void BoardTimer2Init(void);
 
 #endif // _BOARD_H_

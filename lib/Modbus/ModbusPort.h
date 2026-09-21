@@ -15,8 +15,6 @@ extern volatile unsigned char ReceiveCounter;
 
 extern void ModBus_UART_Initialise(void);
 extern void Timer_Initialise(void);
-extern void ModBus_UART_Put(unsigned char c);
-extern unsigned char ModBus_UART_String(unsigned char *s, unsigned int Length);
 
 extern void ModBus_TimerValues(void);
 

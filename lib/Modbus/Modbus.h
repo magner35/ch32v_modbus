@@ -24,6 +24,7 @@ extern unsigned char MODBUS_SLAVE_ADDRESS; // Modbus RTU Slave address number [0
 typedef struct
 {
     short ActValue;
+    // const char flag;
 } RegStructure;
 
 extern RegStructure holdingRegisters[NUMBER_OF_HOLDING_REGISTERS];

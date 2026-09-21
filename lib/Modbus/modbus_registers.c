@@ -18,6 +18,16 @@ void modbusLongToRegister(uint32_t src, uint16_t *dst)
     dst[1] = var.words[1];
 }
 
+void modbusLLToRegister(uint64_t src, uint16_t *dst)
+{
+    LLunion_t var;
+    var.number = src;
+    dst[0] = var.words[0];
+    dst[1] = var.words[1];
+    dst[2] = var.words[2];
+    dst[3] = var.words[3];
+}
+
 /*----------------------------------------------------------------------------*/
 uint32_t modbusRegisterToLong(uint16_t *src)
 {
@@ -32,8 +42,8 @@ void modbusFloatToRegister(float src, uint16_t *dst)
 {
     floatunion_t var;
     var.number = src;
-    dst[0] = var.words[0];
-    dst[1] = var.words[1];
+    dst[1] = var.words[0];
+    dst[0] = var.words[1];
 }
 /*----------------------------------------------------------------------------*/
 
@@ -90,8 +100,8 @@ void modbusFloatToRegister_(float src, uint16_t *dst)
 {
     uint32_t temp;
     memcpy(&temp, &src, sizeof(float));
-    dst[0] = (temp >> 16) & 0xFFFF;
-    dst[1] = temp & 0xFFFF;
+    dst[1] = (temp >> 16) & 0xFFFF;
+    dst[0] = temp & 0xFFFF;
 }
 
 /*----------------------------------------------------------------------------*/

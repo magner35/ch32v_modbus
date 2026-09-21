@@ -51,43 +51,6 @@ void ModBus_UART_Initialise(void)
     USART_Cmd(USART1, ENABLE);
 }
 
-// Timer Initialize 1ms
-void Timer_Initialise(void)
-{
-    RCC->APB2PCENR |= RCC_APB2Periph_TIM1;
-    TIM1->CTLR1 |= TIM_ARPE;
-    TIM1->CTLR2 = TIM_MMS_1;
-    // count up per 1sec
-    // 48000 * 1000 = 48000000
-    TIM1->ATRLR = 480;
-    TIM1->PSC = 100 - 1;
-    TIM1->RPTCR = 0;
-    NVIC_EnableIRQ(TIM1_UP_IRQn);
-    TIM1->INTFR = ~TIM_FLAG_Update;   // 0x0001 // 10.4.5 Interrupt Status Register (TIM1_INTFR)
-    TIM1->SWEVGR = TIM_UG;            // 0x0001 // 10.4.6 Event Generation Register (TIM1_SWEVGR)
-    TIM1->DMAINTENR |= TIM_IT_Update; // 0x0001 // 10.4.4 DMA/Interrupt Enable Register (TIM1_DMAINTENR)
-    // TIM1 Enable
-    TIM1->CTLR1 |= TIM_CEN;
-}
-
-// This is used for send one character
-void ModBus_UART_Put(unsigned char c)
-{
-    while (USART_GetFlagStatus(USART1, USART_FLAG_TC) == RESET)
-        ;
-    USART_SendData(USART1, (uint16_t)c);
-}
-
-// This is used for send string, better to use DMA for it ;)
-unsigned char ModBus_UART_String(unsigned char *s, unsigned int Length)
-{
-    unsigned short DummyCounter;
-    for (DummyCounter = 0; DummyCounter < Length; DummyCounter++)
-        ModBus_UART_Put(s[DummyCounter]);
-
-    return TRUE;
-}
-
 /*************************Interrupt Fonction Slave*****************************/
 // Call this function into your UART Interrupt. Collect data from it!
 // Better to use DMA
@@ -163,15 +126,6 @@ void USART1_IRQHandler(void)
         // Clear the buffer size, signaling the end of the transfer
         Tx_Buf_Size = 0;
         Tx_Index = 0;
-    }
-}
-
-void TIM1_UP_IRQHandler(void) __attribute__((interrupt("WCH-Interrupt-fast")));
-void TIM1_UP_IRQHandler()
-{
-    if (TIM1->INTFR & TIM_FLAG_Update)
-    {
-        TIM1->INTFR = ~TIM_FLAG_Update;
     }
 }
 
