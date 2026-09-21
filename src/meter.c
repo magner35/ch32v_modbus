@@ -9,6 +9,7 @@
 #include "debug.h"
 #include "board.h"
 #include "interpolation.h"
+#include "Modbus.h"
 
 /* ── Тайминги ── */
 #define TIM_CLK_HZ 48000000UL
@@ -16,7 +17,7 @@
 #define TIM_TICK_HZ (TIM_CLK_HZ / TIM_PRESCALER)
 
 /* ── Пороги фильтрации (целочисленные, без float!) ── */
-#define FREQ_MIN_HZ 10UL
+#define FREQ_MIN_HZ 1UL
 #define FREQ_MAX_HZ 4500UL
 /* duty ∈ [0.10 ; 0.90]  ⇔  pulse*10 ∈ [period ; period*9] */
 #define DUTY_NUM_MIN 1UL
@@ -30,48 +31,50 @@
 volatile uint32_t valid_pulse_count = 0;
 volatile uint64_t sum_period_ticks = 0; /* uint64 на случай больших сумм */
 
-/* ── Флаг 100 мс задачи ── */
-volatile uint8_t flag_100ms = 0;
-
 /* ── Результаты 100 мс задачи ── */
 volatile uint32_t last_freq_hz = 0;
-volatile uint32_t last_valid_cnt = 0;
+
+#define MIN_PULSES_FOR_AVG 10 /* минимум для усреднения */
+#define MAX_WINDOW_TICKS 10   /* макс. окно = 1 с */
+
+volatile uint32_t window_start_tick = 0;
 
 void timer_100ms_callback(void)
 {
-    // LED2_GPIO_PORT->OUTDR ^= LED2_GPIO_PIN;
-}
+    static uint8_t i = 0; // counter
 
-void Task_100ms(void)
-{
-    /* ── Атомарно снять снапшот и обнулить счётчики ── */
+    uint32_t now = i; /* или свой счётчик */
+    uint32_t elapsed = now - window_start_tick;
+    i++;
+
     __disable_irq();
     uint32_t cnt = valid_pulse_count;
     uint64_t sum = sum_period_ticks;
-    valid_pulse_count = 0;
-    sum_period_ticks = 0;
     __enable_irq();
 
-    /* ── Расчёт частоты через усреднённый период ── */
+    /* Ждём, пока наберётся достаточно импульсов ИЛИ истечёт время */
+    if (cnt < MIN_PULSES_FOR_AVG && elapsed < MAX_WINDOW_TICKS)
+    {
+        return; /* продолжаем копить */
+    }
+
+    /* Окно закрыто — считаем */
+    __disable_irq();
+    valid_pulse_count = 0;
+    sum_period_ticks = 0;
+    window_start_tick = i;
+    __enable_irq();
+
+    uint32_t freq_hz = 0;
     if (cnt > 0)
     {
-        uint32_t avg_period = (uint32_t)(sum / cnt); /* тики */
-        uint32_t freq_hz = TIM_TICK_HZ / avg_period; /* Гц    */
-
-        last_freq_hz = freq_hz;
-        last_valid_cnt = cnt;
-
-        /* Здесь можно:
-         *   - вывести в UART
-         *   - обновить дисплей
-         *   - передать по Modbus и т.д.
-         */
+        freq_hz = (1000ULL * TIM_TICK_HZ) / (uint32_t)(sum / cnt);
     }
-    else
-    {
-        last_freq_hz = 0; /* нет валидных импульсов за окно */
-        last_valid_cnt = 0;
-    }
+    last_freq_hz = freq_hz;
+
+    holdingRegisters[7].ActValue = sum;
+    holdingRegisters[8].ActValue = cnt;
+    holdingRegisters[9].ActValue = last_freq_hz;
 }
 
 void timer_10ms_callback(void)
@@ -106,9 +109,9 @@ void BoardTimer2Init(void)
     GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(GPIOD, &GPIO_InitStruct);
 
-    /* 3. TimeBase: PSC=47 → 1 МГц, ARR=0xFFFF */
+    /* 3. TimeBase: PSC=0 → 48 МГц, ARR=0xFFFF */
     TIM_TimeBaseStruct.TIM_Period = 0xFFFF;
-    TIM_TimeBaseStruct.TIM_Prescaler = 48 - 1;
+    TIM_TimeBaseStruct.TIM_Prescaler = TIM_PRESCALER - 1;
     TIM_TimeBaseStruct.TIM_ClockDivision = TIM_CKD_DIV1;
     TIM_TimeBaseStruct.TIM_CounterMode = TIM_CounterMode_Up;
     TIM_TimeBaseStruct.TIM_RepetitionCounter = 0;

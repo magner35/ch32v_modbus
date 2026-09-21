@@ -50,7 +50,7 @@ int main(void)
 
     SoftTimerInit(&test_timer, 100, 0);
     SoftTimerInit(&timer_100ms, 100, timer_100ms_callback);
-    SoftTimerInit(&timer_10ms, 10, timer_10ms_callback);
+    SoftTimerInit(&timer_10ms, 100, timer_10ms_callback);
 
     while (1)
     {
@@ -80,31 +80,12 @@ int main(void)
 
             // result_float = interpolationLinear(xValues, yValues, linearisation_points, frequency, linearisation_predict); // 60 us
             // result_float = interpolationCatmullSpline(xValues, yValues, linearisation_points, frequency, linearisation_predict); // 256 us
-            result_float = interpolationConstrainedSpline(xValues, yValues, linearisation_points, frequency, linearisation_predict); // 690 us
+            // result_float = interpolationConstrainedSpline(xValues, yValues, linearisation_points, frequency, linearisation_predict); // 690 us
             GPIO_ResetBits(LED2_GPIO_PORT, LED2_GPIO_PIN);
 
             modbusLLToRegister(result_int, (uint16_t *)&holdingRegisters[0].ActValue);
 
             modbusFloatToRegister_(result_float, (uint16_t *)&holdingRegisters[4].ActValue);
-
-            modbusFloatToRegister_((float)result_int / 1000000, (uint16_t *)&holdingRegisters[6].ActValue);
-
-            volatile uint16_t cnt1 = TIM1->CNT;
-            volatile uint16_t cnt2 = TIM2->CNT;
-            holdingRegisters[8].ActValue = cnt1;
-
-            holdingRegisters[9].ActValue = cnt2;
-
-            inputRegisters[0].ActValue++;
-            inputRegisters[1].ActValue--;
-            inputRegisters[2].ActValue++;
-            inputRegisters[3].ActValue--;
-            inputRegisters[4].ActValue++;
-            inputRegisters[5].ActValue--;
-            inputRegisters[6].ActValue++;
-            inputRegisters[7].ActValue--;
-            inputRegisters[8].ActValue++;
-            inputRegisters[9].ActValue--;
 
             LED1_GPIO_PORT->OUTDR ^= LED1_GPIO_PIN;
         }
