@@ -50,7 +50,7 @@ int main(void)
 
     SoftTimerInit(&test_timer, 100, 0);
     SoftTimerInit(&timer_100ms, 100, timer_100ms_callback);
-    SoftTimerInit(&timer_10ms, 100, timer_10ms_callback);
+    SoftTimerInit(&timer_10ms, 10, timer_10ms_callback);
 
     while (1)
     {

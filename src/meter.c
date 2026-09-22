@@ -10,6 +10,7 @@
 #include "board.h"
 #include "interpolation.h"
 #include "Modbus.h"
+#include "modbus_registers.h"
 
 /* ── Тайминги ── */
 #define TIM_CLK_HZ 48000000UL
@@ -31,15 +32,13 @@
 volatile uint32_t valid_pulse_count = 0;
 volatile uint64_t sum_period_ticks = 0; /* uint64 на случай больших сумм */
 
-/* ── Результаты 100 мс задачи ── */
-volatile uint32_t last_freq_hz = 0;
-
 #define MIN_PULSES_FOR_AVG 10 /* минимум для усреднения */
 #define MAX_WINDOW_CALLS 10   /* макс. окно = 1 с */
 
 void timer_100ms_callback(void)
 {
-    static uint8_t counter = 0; // counter
+    static float last_freq_hz = 0;
+    static uint8_t counter = 0;
     counter++;
 
     __disable_irq();
@@ -48,29 +47,24 @@ void timer_100ms_callback(void)
     __enable_irq();
 
     /* Ждём, пока наберётся достаточно импульсов ИЛИ истечёт время */
-    if (cnt < MIN_PULSES_FOR_AVG && counter < MAX_WINDOW_CALLS)
+    if (cnt >= MIN_PULSES_FOR_AVG || counter >= MAX_WINDOW_CALLS)
     {
-        return; /* продолжаем копить */
+        /* Окно закрыто — считаем */
+        __disable_irq();
+        valid_pulse_count = 0;
+        sum_period_ticks = 0;
+        __enable_irq();
+        counter = 0;
+        float freq_hz = 0;
+        if (cnt > 0)
+        {
+            freq_hz = TIM_TICK_HZ / ((float)sum / cnt);
+        }
+        last_freq_hz = freq_hz;
     }
-
-    /* Окно закрыто — считаем */
-    __disable_irq();
-    valid_pulse_count = 0;
-    sum_period_ticks = 0;
-    __enable_irq();
-
-    counter = 0;
-
-    uint32_t freq_hz = 0;
-    if (cnt > 0)
-    {
-        freq_hz = (1000ULL * TIM_TICK_HZ) / (uint32_t)(sum / cnt);
-    }
-    last_freq_hz = freq_hz;
-
-    holdingRegisters[7].ActValue = sum;
-    holdingRegisters[8].ActValue = cnt;
-    holdingRegisters[9].ActValue = last_freq_hz;
+    holdingRegisters[6].ActValue = sum;
+    holdingRegisters[7].ActValue = cnt;
+    modbusFloatToRegister_(last_freq_hz, (uint16_t *)&holdingRegisters[8].ActValue);
 }
 
 void timer_10ms_callback(void)
@@ -101,7 +95,7 @@ void BoardTimer2Init(void)
 
     /* 2. PD4 → Floating Input (TIM2_CH1 / TI1) */
     GPIO_InitStruct.GPIO_Pin = GPIO_Pin_4;
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IPU;
     GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(GPIOD, &GPIO_InitStruct);
 
