@@ -131,16 +131,7 @@ uint32_t modbusRegisterToLong(uint16_t *src);
 void modbusFloatToRegister(float src, uint16_t *dst);
 float modbusRegisterToFloat(uint16_t *src);
 
-void modbusLongToRegister_(uint32_t src, uint16_t *dst);
-uint32_t modbusRegisterToLong_(uint16_t *src);
-void modbusFloatToRegister_(float src, uint16_t *dst);
-float modbusRegisterToFloat_(uint16_t *src);
-
 void regToFloatCopy(uint16_t dest[], float source[], uint8_t count);
 void floatToRegCopy(float source[], uint16_t dest[], uint8_t count);
-
-
-void modbusLLToRegister(uint64_t src, uint16_t *dst);
-
 
 #endif // !_MODBUS_

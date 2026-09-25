@@ -64,7 +64,7 @@ void timer_100ms_callback(void)
     }
     holdingRegisters[6].ActValue = sum;
     holdingRegisters[7].ActValue = cnt;
-    modbusFloatToRegister_(last_freq_hz, (uint16_t *)&holdingRegisters[8].ActValue);
+    modbusFloatToRegister(last_freq_hz, (uint16_t *)&holdingRegisters[8].ActValue);
 }
 
 void timer_10ms_callback(void)

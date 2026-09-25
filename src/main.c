@@ -83,10 +83,6 @@ int main(void)
             // result_float = interpolationConstrainedSpline(xValues, yValues, linearisation_points, frequency, linearisation_predict); // 690 us
             GPIO_ResetBits(LED2_GPIO_PORT, LED2_GPIO_PIN);
 
-            modbusLLToRegister(result_int, (uint16_t *)&holdingRegisters[0].ActValue);
-
-            modbusFloatToRegister_(result_float, (uint16_t *)&holdingRegisters[4].ActValue);
-
             LED1_GPIO_PORT->OUTDR ^= LED1_GPIO_PIN;
         }
     }
