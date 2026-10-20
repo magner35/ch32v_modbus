@@ -6,14 +6,7 @@
 
 #define LPOINTS 10
 
-enum
-{
-    OFF,
-    ON
-};
-
 /* ── Обёртки «значение + диапазон» ─────────────────────────────────────── */
-
 typedef struct
 {
     float value; /* значение */
@@ -38,7 +31,6 @@ typedef struct
 } bset_t;
 
 /* ── Типы настроек ─────────────────────────────────────────────────────── */
-
 typedef enum
 {
     ST_BOOL,
@@ -50,6 +42,91 @@ typedef enum
     ST_FLOAT
 } setting_type_t;
 
+/* ── Значения enum-настроек (числа = значения в регистрах/flash) ── */
+enum
+{
+    OFF,
+    ON
+};
+
+enum
+{
+    INTERPOLATION_NONE,
+    INTERPOLATION_LINEAR,
+    INTERPOLATION_SPLINEB
+};
+
+enum
+{
+    UNITS_ML,
+    UNITS_L,
+    UNITS_M3
+}; /* units_total, units_gtotal, multiplier_units */
+enum
+{
+    TBASE_SEC,
+    TBASE_MIN,
+    TBASE_HOUR
+}; /* units_time_base */
+enum
+{
+    PARITY_NONE,
+    PARITY_EVEN,
+    PARITY_ODD
+}; /* interfaceRS485_parity */
+enum
+{
+    AOUT_RATE,
+    AOUT_TOTAL,
+    AOUT_GTOTAL
+}; /* aout_parameter */
+
+enum
+{
+    BAUD_1200,
+    BAUD_2400,
+    BAUD_4800,
+    BAUD_9600,
+    BAUD_14400,
+    BAUD_19200,
+    BAUD_28800,
+    BAUD_38400,
+    BAUD_57600,
+    BAUD_115200
+};
+
+enum
+{
+    ILEVEL_40,
+    ILEVEL_20,
+    ILEVEL_10,
+    ILEVEL_5
+};
+
+enum
+{
+    FILTERQ_OFF,
+    FILTERQ_12,
+    FILTERQ_25,
+    FILTERQ_37,
+    FILTERQ_50
+};
+
+enum
+{
+    FILTERHF_OFF,
+    FILTERHF_300,
+    FILTERHF_600,
+    FILTERHF_1200,
+    FILTERHF_2400
+};
+
+enum
+{
+    IMODE_RS485,
+    IMODE_PULSE,
+};
+
 /* ── Единственное место правды: все настройки прибора ──────────────────── */
 /* Порядок строк = порядок полей в settings_t / set_t и порядок SET_*-индексов.
  * Правила колонок:
@@ -58,34 +135,34 @@ typedef enum
  *   U8/I8/U16/U32 — min/max того же типа, что и параметр
  *   FLOAT — без ограничений:         X(имя, FLOAT, -, -,      def)
  *        имя                        тип    мин     макс      дефолт        */
-#define SETTINGS_TABLE(X)                                                                       \
-    X(multiplier_parameter, BOOL, -, -, 0)         /* 0 - K-фактор, 1 - цена импульса */        \
-    X(multiplier_units, ENUM, -, 3, 1)             /* 0 - миллилитр, 1 - литр, 2 - метр куб. */ \
-    X(multiplier_value_average, FLOAT, -, -, 1.0f) /* значение множителя */                     \
-    X(linearisation_function, BOOL, -, -, 0)       /* 0 - выкл, 1 - сплайн-Б */                 \
-    X(meter_correction, FLOAT, -, -, 1.0f)         /* поправочный коэффициент */                \
-    X(serial_number, U32, 0, 999999, 0)            /* серийный номер прибора */                 \
-    X(units_time_base, ENUM, -, 3, 0)              /* 0 - сек, 1 - мин, 2 - час (TODO) */       \
-    X(units_rate, ENUM, -, 3, 1)                   /* 0 - миллилитр, 1 - литр, 2 - метр куб. */ \
-    X(units_total, ENUM, -, 3, 1)                  /* 0 - миллилитр, 1 - литр, 2 - метр куб. */ \
-    X(units_gtotal, ENUM, -, 3, 1)                 /* 0 - миллилитр, 1 - литр, 2 - метр куб. */ \
-    X(aout_parameter, ENUM, -, 4, 0)               /* переменная для аналогового выхода */      \
-    X(aout_treshold_4ma, FLOAT, -, -, 0.0f)        /* нижний порог */                           \
-    X(aout_treshold_20ma, FLOAT, -, -, 0.0f)       /* верхний порог */                          \
-    X(rate_damping, U8, 0, 99, 0)                  /* сек демпфирования*/                       \
-    X(rate_averaging, U8, 0, 255, 0)               /* количество импульсов для усреднения */    \
-    X(sensor_level, ENUM, -, 4, 0)                 /* gain входного усилителя */                \
-    X(sensor_filter_freq_high, ENUM, -, 4, 0)      /* индекс, не Гц: сейчас 4500 Гц (TODO) */   \
-    X(sensor_filter_freq_low, ENUM, -, 10, 0)      /* индекс, не Гц: сейчас 1 Гц (TODO) */      \
-    X(sensor_filter_duty, ENUM, -, 4, 0)           /* индекс, не % (TODO) */                    \
-    X(interfaceRS485_slave_address, U8, 1, 247, 1) /* адрес устройства modbus */                \
-    X(interfaceRS485_baudrate, ENUM, -, 10, 3)     /* 3 = 9600 */                               \
-    X(interfaceRS485_parity, ENUM, -, 3, 0)        /* 0 - none, 1 - even, 2 - odd */            \
-    X(interfaceRS485_stopbits, BOOL, -, -, 0)      /* 0 - 1 стоп-бит, 1 - 2 */                  \
-    X(interfaceRS485_delay, U8, 0, 255, 5)         /* задержка ответа, мс */                    \
-    X(interfaceRS485_mode, ENUM, -, 2, 0)          /* альтернативная фунция (TODO) */           \
-    X(aout_calibration_low, FLOAT, -, -, 0.0f)     /* нижнее клибровочное значение АВ */        \
-    X(aout_calibration_high, FLOAT, -, -, 0.0f)    /* верхнее калибровочное значение АВ */
+#define SETTINGS_TABLE(X)                                                                             \
+    X(multiplier_parameter, BOOL, -, -, 0)               /* 0 - K-фактор, 1 - цена импульса */        \
+    X(multiplier_units, ENUM, -, 3, UNITS_ML)            /* 0 - миллилитр, 1 - литр, 2 - метр куб. */ \
+    X(multiplier_value_average, FLOAT, -, -, 1.0f)       /* значение множителя */                     \
+    X(linearisation_function, ENUM, -, 3, 0)             /* 0 - выкл, 1 - линейная, 2 - сплайн-Б */   \
+    X(meter_correction, FLOAT, -, -, 1.0f)               /* поправочный коэффициент */                \
+    X(serial_number, U32, 0, 999999, 123456)             /* серийный номер прибора */                 \
+    X(units_time_base, ENUM, -, 3, TBASE_MIN)            /* 0 - сек, 1 - мин, 2 - час (TODO) */       \
+    X(units_rate, ENUM, -, 3, UNITS_L)                   /* 0 - миллилитр, 1 - литр, 2 - метр куб. */ \
+    X(units_total, ENUM, -, 3, UNITS_L)                  /* 0 - миллилитр, 1 - литр, 2 - метр куб. */ \
+    X(units_gtotal, ENUM, -, 3, UNITS_L)                 /* 0 - миллилитр, 1 - литр, 2 - метр куб. */ \
+    X(aout_parameter, ENUM, -, 3, AOUT_RATE)             /* переменная для аналогового выхода */      \
+    X(aout_treshold_4ma, FLOAT, -, -, 0.0f)              /* нижний порог */                           \
+    X(aout_treshold_20ma, FLOAT, -, -, 0.0f)             /* верхний порог */                          \
+    X(rate_damping, U8, 0, 99, 0)                        /* сек демпфирования*/                       \
+    X(rate_averaging, U8, 0, 255, 0)                     /* количество импульсов для усреднения */    \
+    X(input_sens, ENUM, -, 4, ILEVEL_40)                 /* чувствительность по входу */              \
+    X(sensor_filter_freq_high, ENUM, -, 5, FILTERHF_OFF) /* индекс, не Гц: сейчас 4500 Гц (TODO) */   \
+    X(sensor_filter_freq_low, U8, 0, 255, 0)             /* ФНЧ Гц */                                 \
+    X(sensor_filter_duty, ENUM, -, 5, FILTERQ_OFF)       /* Q коэф.заполнения % */                    \
+    X(interfaceRS485_slave_address, U8, 1, 247, 1)       /* адрес устройства modbus */                \
+    X(interfaceRS485_baudrate, ENUM, -, 10, BAUD_9600)   /* rs-485 baudrate */                        \
+    X(interfaceRS485_parity, ENUM, -, 3, PARITY_NONE)    /* 0 - none, 1 - even, 2 - odd */            \
+    X(interfaceRS485_stopbits, BOOL, -, -, 0)            /* 0 - 1 стоп-бит, 1 - 2 */                  \
+    X(interfaceRS485_delay, U8, 0, 255, 5)               /* задержка ответа, мс */                    \
+    X(interfaceRS485_mode, ENUM, -, 2, IMODE_RS485)      /* альтернативная фунция (TODO) */           \
+    X(aout_calibration_low, FLOAT, -, -, 0.0f)           /* нижнее клибровочное значение АВ */        \
+    X(aout_calibration_high, FLOAT, -, -, 0.0f)          /* верхнее калибровочное значение АВ */
 
 /* ── Отображения «символьный тип → C-тип / обёртка / инициализатор» ────── */
 

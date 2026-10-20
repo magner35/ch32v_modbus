@@ -49,16 +49,26 @@ enum
     HREG_meter_correction,                               // format:F, type:FLOAT, values:0 … 999999.9
     PREV_LONG_MEMBER(HREG_meter_qmax_lpm),               // format:F, type:FLOAT, values:0 … 999999.9
     PREV_LONG_MEMBER(HREG_serial_number),                // format:UL, type:U32, values:000000 … 999999
-    PREV_LONG_MEMBER(HREG_LP1),                          // format:F, type:FLOAT, values:0 … 999999.9
-    PREV_LONG_MEMBER(HREG_LP2),                          // format:F, type:FLOAT, values:0 … 999999.9
-    PREV_LONG_MEMBER(HREG_LP3),                          // format:F, type:FLOAT, values:0 … 999999.9
-    PREV_LONG_MEMBER(HREG_LP4),                          // format:F, type:FLOAT, values:0 … 999999.9
-    PREV_LONG_MEMBER(HREG_LP5),                          // format:F, type:FLOAT, values:0 … 999999.9
-    PREV_LONG_MEMBER(HREG_LP6),                          // format:F, type:FLOAT, values:0 … 999999.9
-    PREV_LONG_MEMBER(HREG_LP7),                          // format:F, type:FLOAT, values:0 … 999999.9
-    PREV_LONG_MEMBER(HREG_LP8),                          // format:F, type:FLOAT, values:0 … 999999.9
-    PREV_LONG_MEMBER(HREG_LP9),                          // format:F, type:FLOAT, values:0 … 999999.9
-    PREV_LONG_MEMBER(HREG_LP10),                         // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_LPF1),                         // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_LPF2),                         // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_LPF3),                         // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_LPF4),                         // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_LPF5),                         // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_LPF6),                         // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_LPF7),                         // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_LPF8),                         // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_LPF9),                         // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_LPF10),                        // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_LPV1),                         // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_LPV2),                         // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_LPV3),                         // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_LPV4),                         // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_LPV5),                         // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_LPV6),                         // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_LPV7),                         // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_LPV8),                         // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_LPV9),                         // format:F, type:FLOAT, values:0 … 999999.9
+    PREV_LONG_MEMBER(HREG_LPV10),                        // format:F, type:FLOAT, values:0 … 999999.9
     PREV_LONG_MEMBER(HREG_aout_calibration_low),         // format:F, type:FLOAT, values:0 … 999999.9
     PREV_LONG_MEMBER(HREG_aout_calibration_high),        // format:F, type:FLOAT, values:0 … 999999.9
     PREV_LONG_MEMBER(HREG_LASTREGISTER)                  // last holding register mark

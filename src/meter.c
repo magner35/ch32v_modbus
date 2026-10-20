@@ -46,6 +46,10 @@ void timer_100ms_callback(void)
     static float last_freq_hz = 0;
     static uint8_t counter = 0;
     static uint32_t impulses = 0;
+
+    uint8_t linearisation_points = 0;
+    float kf_value;
+
     counter++;
 
     __disable_irq();
@@ -78,15 +82,21 @@ void timer_100ms_callback(void)
         i = 0;
 
         runtime_device++;
+
+        linearisation_points = settingsLpoints();
     }
 
-    unsigned int linearisation_points = 6;
-    unsigned int linearisation_predict = 0;
-    
     GPIO_SetBits(LED2_GPIO_PORT, LED2_GPIO_PIN);
-    // result_float = interpolationLinear(xValues, yValues, linearisation_points, frequency, linearisation_predict); // 60 us
-    // result_float = interpolationCatmullSpline(xValues, yValues, linearisation_points, frequency, linearisation_predict); // 256 us
-    float result_float = interpolationConstrainedSpline(xValues, yValues, linearisation_points, last_freq_hz, linearisation_predict); // 690 us
+    if (g_settings.linearisation_function == INTERPOLATION_SPLINEB)
+    {
+        kf_value = interpolationConstrainedSpline(xValues, yValues, linearisation_points, last_freq_hz, 1); // 690 us
+    }
+    else if (g_settings.linearisation_function == INTERPOLATION_LINEAR)
+    {
+        kf_value = interpolationLinear(xValues, yValues, linearisation_points, last_freq_hz, 1); // 60 us
+    }
+    else
+        kf_value = g_settings.multiplier_value_average;
     GPIO_ResetBits(LED2_GPIO_PORT, LED2_GPIO_PIN);
 
     // holdingRegisters[6].ActValue = sum;
