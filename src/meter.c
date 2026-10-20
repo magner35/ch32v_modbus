@@ -11,6 +11,7 @@
 #include "interpolation.h"
 #include "Modbus.h"
 #include "modbus_registers.h"
+#include "settings.h"
 
 /* ── Тайминги ── */
 #define TIM_CLK_HZ 48000000UL
@@ -35,10 +36,16 @@ volatile uint64_t sum_period_ticks = 0; /* uint64 на случай больши
 #define MIN_PULSES_FOR_AVG 10 /* минимум для усреднения */
 #define MAX_WINDOW_CALLS 10   /* макс. окно = 1 с */
 
+const float xValues[] = {10, 20, 40, 80, 160, 320};
+const float yValues[] = {1, 2, 3, 4, 5, 6};
+
 void timer_100ms_callback(void)
 {
+    static uint8_t i = 0;
+    static uint32_t runtime_device;
     static float last_freq_hz = 0;
     static uint8_t counter = 0;
+    static uint32_t impulses = 0;
     counter++;
 
     __disable_irq();
@@ -61,10 +68,35 @@ void timer_100ms_callback(void)
             freq_hz = TIM_TICK_HZ / ((float)sum / cnt);
         }
         last_freq_hz = freq_hz;
+        impulses = impulses + cnt;
     }
-    holdingRegisters[6].ActValue = sum;
-    holdingRegisters[7].ActValue = cnt;
-    modbusFloatToRegister(last_freq_hz, (uint16_t *)&holdingRegisters[8].ActValue);
+    float rate = last_freq_hz * g_settings.multiplier_value_average;
+
+    // 1 sek regio
+    if (++i == 10)
+    {
+        i = 0;
+
+        runtime_device++;
+    }
+
+    unsigned int linearisation_points = 6;
+    unsigned int linearisation_predict = 0;
+    
+    GPIO_SetBits(LED2_GPIO_PORT, LED2_GPIO_PIN);
+    // result_float = interpolationLinear(xValues, yValues, linearisation_points, frequency, linearisation_predict); // 60 us
+    // result_float = interpolationCatmullSpline(xValues, yValues, linearisation_points, frequency, linearisation_predict); // 256 us
+    float result_float = interpolationConstrainedSpline(xValues, yValues, linearisation_points, last_freq_hz, linearisation_predict); // 690 us
+    GPIO_ResetBits(LED2_GPIO_PORT, LED2_GPIO_PIN);
+
+    // holdingRegisters[6].ActValue = sum;
+    // holdingRegisters[7].ActValue = cnt;
+    inputRegisters[IREG_STATUS].ActValue = 1979U;
+    inputRegisters[IREG_ESTATUS].ActValue = 1983U;
+    modbusFloatToRegister(rate, (uint16_t *)&inputRegisters[IREG_RATE].ActValue);
+    modbusFloatToRegister(last_freq_hz, (uint16_t *)&inputRegisters[IREG_FREQUENCY].ActValue);
+    modbusLongToRegister(impulses, (uint16_t *)&inputRegisters[IREG_IMPULSES].ActValue);
+    modbusLongToRegister(runtime_device, (uint16_t *)&inputRegisters[IREG_RUNTIME_DEVICE].ActValue);
 }
 
 void timer_10ms_callback(void)

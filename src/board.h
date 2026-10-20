@@ -15,6 +15,5 @@
 
 void BoardGpioInit(void);
 void BoardTimer1Init(void);
-void BoardTimer2Init(void);
 
 #endif // _BOARD_H_
