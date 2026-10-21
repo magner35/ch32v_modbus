@@ -52,6 +52,9 @@ void timer_100ms_callback(void)
     static uint8_t counter = 0;
     static uint32_t impulses = 0;
 
+    uint8_t linearisation_points = 0;
+    float kf_value;
+
     counter++;
 
     __disable_irq();
@@ -76,7 +79,6 @@ void timer_100ms_callback(void)
         last_freq_hz = freq_hz;
         impulses = impulses + cnt;
     }
-    float rate = last_freq_hz * g_settings.multiplier_value_average;
 
     /* раз в секунду: наработка + пересчёт таблицы линеаризации */
     if (++i == 10)
@@ -88,17 +90,29 @@ void timer_100ms_callback(void)
 
     /* TODO: линеаризация расхода по lpoint_forward_* (вместо xValues/yValues) */
 
-    modbusFloatToRegister(rate, (uint16_t *)&inputRegisters[IREG_RATE].ActValue);
-    modbusFloatToRegister(last_freq_hz, (uint16_t *)&inputRegisters[IREG_FREQUENCY].ActValue);
-    modbusLongToRegister(impulses, (uint16_t *)&inputRegisters[IREG_IMPULSES].ActValue);
-    modbusLongToRegister(runtime_device, (uint16_t *)&inputRegisters[IREG_RUNTIME_DEVICE].ActValue);
+    GPIO_SetBits(LED2_GPIO_PORT, LED2_GPIO_PIN);
+    if (g_settings.linearisation)
+    {
+        kf_value = interpolationConstrainedSpline(xValues, yValues, linearisation_points, last_freq_hz, 1); // 690 us
+    }
+    else
+        kf_value = g_settings.multiplier_value_average;
+    GPIO_ResetBits(LED2_GPIO_PORT, LED2_GPIO_PIN);
+
+    float rate = last_freq_hz * kf_value;
+
+    modbusFloatToRegister(rate, &inputRegisters[IREG_RATE]);
+    modbusFloatToRegister(last_freq_hz, &inputRegisters[IREG_FREQUENCY]);
+    modbusLongToRegister(impulses, &inputRegisters[IREG_IMPULSES]);
+    modbusLongToRegister(runtime_device, &inputRegisters[IREG_RUNTIME_DEVICE]);
 
     /* отладочный регистр: младший байт — журнал критических данных
      * (бит0 найден, бит1 записан, бит2 верифицирован, бит3 прошлая сессия
      * с PVD-сохранением, бит4 аварийный путь, бит5 запись легла, бит6 НЕ
      * легла); биты 8-9 — PVDO при старте / PVD-прерывание;
      * биты 12-15 — счётчик входов в аварию */
-    inputRegisters[IREG_DEBUG1].ActValue = (uint16_t)(critical_debug | ((uint16_t)powermon_debug << 8) | ((uint16_t)(powermon_fail_events & 0x0F) << 12));
+    inputRegisters[IREG_DEBUG1] = (uint16_t)(critical_debug | ((uint16_t)powermon_debug << 8) |
+                                             ((uint16_t)(powermon_fail_events & 0x0F) << 12));
 }
 
 void timer_10ms_callback(void)
