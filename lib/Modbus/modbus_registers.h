@@ -22,7 +22,6 @@ enum
     PREV_LONG_MEMBER(IREG_RUNTIME_DEVICE),    // format:UL, type:TIME
     PREV_LONG_MEMBER(IREG_POWERON_NUMBER),    // format:U, type:U16
     IREG_METERCRC16,                          // format:U, type:U16
-    IREG_METERTIME,                           // format:UL, type:TIME
     IREG_ESTATUS,                             // format:U, type:U16
     IREG_DEBUG1,                              // format:U, type:U16, отладка
     IREG_LASTREGISTER                         // last input register mark

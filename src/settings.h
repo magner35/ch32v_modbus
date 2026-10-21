@@ -51,13 +51,6 @@ enum
 
 enum
 {
-    INTERPOLATION_NONE,
-    INTERPOLATION_LINEAR,
-    INTERPOLATION_SPLINEB
-};
-
-enum
-{
     UNITS_ML,
     UNITS_L,
     UNITS_M3
@@ -139,7 +132,7 @@ enum
     X(multiplier_parameter, BOOL, -, -, 0)               /* 0 - K-фактор, 1 - цена импульса */        \
     X(multiplier_units, ENUM, -, 3, UNITS_ML)            /* 0 - миллилитр, 1 - литр, 2 - метр куб. */ \
     X(multiplier_value_average, FLOAT, -, -, 1.0f)       /* значение множителя */                     \
-    X(linearisation_function, ENUM, -, 3, 0)             /* 0 - выкл, 1 - линейная, 2 - сплайн-Б */   \
+    X(linearisation, BOOL, -, -, 1)                      /* 0 - выкл, 1 - сплайн-Б */                 \
     X(meter_correction, FLOAT, -, -, 1.0f)               /* поправочный коэффициент */                \
     X(serial_number, U32, 0, 999999, 123456)             /* серийный номер прибора */                 \
     X(units_time_base, ENUM, -, 3, TBASE_MIN)            /* 0 - сек, 1 - мин, 2 - час (TODO) */       \
