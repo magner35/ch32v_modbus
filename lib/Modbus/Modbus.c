@@ -39,7 +39,7 @@ volatile unsigned char Tx_Buf[MODBUS_TRANSMIT_BUFFER_SIZE];
 volatile uint8_t Tx_Buf_Size = 0;
 volatile uint8_t Tx_Index = 0;
 volatile uint8_t Tx_DelayCounter = 0;
-static uint8_t Tx_Len = 0;      /* длина ответа без CRC */
+static uint8_t Tx_Len = 0; /* длина ответа без CRC */
 static unsigned int Tx_CRC16 = 0xFFFF;
 static RXTX_STATE Tx_State = RXTX_IDLE;
 
@@ -121,27 +121,27 @@ void HandleModbusError(char ErrorCode)
 /******************************************************************************/
 
 /*
- * Function Name        : HandleModbusReadInputRegisters
- * @How to use          : Modbus function 04 - Read input registers
+ * Function Name        : HandleModbusReadRegisters
+ * @How to use          : Modbus functions 03/04 — универсальный обработчик
+ *                        чтения (holding и input регистры)
  */
-#if MODBUS_READ_INPUT_REGISTERS_ENABLED > 0
-void HandleModbusReadInputRegisters(void)
+static void HandleModbusReadRegisters(unsigned char Function, const uint16_t *Registers, unsigned int RegisterCount)
 {
     unsigned int StartAddress = ((unsigned int)ReceiveBuffer[2] << 8) + ReceiveBuffer[3];
     unsigned int NumberOfRegisters = ((unsigned int)ReceiveBuffer[4] << 8) + ReceiveBuffer[5];
 
-    if ((StartAddress + NumberOfRegisters) > NUMBER_OF_INPUT_REGISTERS)
+    if ((StartAddress + NumberOfRegisters) > RegisterCount)
     {
         HandleModbusError(ERROR_CODE_02);
     }
     else
     {
         Tx_Buf[0] = MODBUS_SLAVE_ADDRESS;
-        Tx_Buf[1] = MODBUS_READ_INPUT_REGISTERS;
+        Tx_Buf[1] = Function;
         Tx_Buf[2] = (unsigned char)(NumberOfRegisters * 2);
         for (unsigned int i = 0; i < NumberOfRegisters; i++)
         {
-            unsigned short CurrentData = inputRegisters[StartAddress + i];
+            unsigned short CurrentData = Registers[StartAddress + i];
             Tx_Buf[3 + 2 * i] = (unsigned char)((CurrentData & 0xFF00) >> 8);
             Tx_Buf[4 + 2 * i] = (unsigned char)(CurrentData & 0xFF);
         }
@@ -149,84 +149,25 @@ void HandleModbusReadInputRegisters(void)
         SendMessage();
     }
 }
-#endif
 /******************************************************************************/
 
 /*
- * Function Name        : HandleModbusReadHoldingRegisters
- * @How to use          : Modbus function 03 - Read holding registers
+ * Function Name        : HandleModbusWriteRegisters
+ * @How to use          : Modbus functions 06/16 — универсальный обработчик
+ *                        записи holding-регистров. Ответ обоих функций
+ *                        одинаков (эхо адреса и значения/количества),
+ *                        отличается только источник данных: FC06 — одно
+ *                        значение из байт 4-5, FC16 — массив с 7-го байта
  */
-#if MODBUS_READ_HOLDING_REGISTERS_ENABLED > 0
-void HandleModbusReadHoldingRegisters(void)
+static void HandleModbusWriteRegisters(unsigned char Function)
 {
     unsigned int StartAddress = ((unsigned int)ReceiveBuffer[2] << 8) + ReceiveBuffer[3];
-    unsigned int NumberOfRegisters = ((unsigned int)ReceiveBuffer[4] << 8) + ReceiveBuffer[5];
-
-    if ((StartAddress + NumberOfRegisters) > NUMBER_OF_HOLDING_REGISTERS)
-    {
-        HandleModbusError(ERROR_CODE_02);
-    }
-    else
-    {
-        Tx_Buf[0] = MODBUS_SLAVE_ADDRESS;
-        Tx_Buf[1] = MODBUS_READ_HOLDING_REGISTERS;
-        Tx_Buf[2] = (unsigned char)(NumberOfRegisters * 2);
-        for (unsigned int i = 0; i < NumberOfRegisters; i++)
-        {
-            unsigned short CurrentData = holdingRegisters[StartAddress + i];
-            Tx_Buf[3 + 2 * i] = (unsigned char)((CurrentData & 0xFF00) >> 8);
-            Tx_Buf[4 + 2 * i] = (unsigned char)(CurrentData & 0xFF);
-        }
-        Tx_Len = 3 + 2 * NumberOfRegisters;
-        SendMessage();
-    }
-}
-#endif
-/******************************************************************************/
-
-/*
- * Function Name        : HandleModbusWriteSingleRegister
- * @How to use          : Modbus function 06 - Write single register
- */
-#if MODBUSWRITE_SINGLE_REGISTER_ENABLED > 0
-void HandleModbusWriteSingleRegister(void)
-{
-    unsigned int Address = ((unsigned int)ReceiveBuffer[2] << 8) + ReceiveBuffer[3];
-    unsigned int Value = ((unsigned int)ReceiveBuffer[4] << 8) + ReceiveBuffer[5];
+    unsigned int NumberOfRegisters = (Function == MODBUS_WRITE_SINGLE_REGISTER)
+                                         ? 1u
+                                         : (((unsigned int)ReceiveBuffer[4] << 8) + ReceiveBuffer[5]);
 
     Tx_Buf[0] = MODBUS_SLAVE_ADDRESS;
-    Tx_Buf[1] = MODBUS_WRITE_SINGLE_REGISTER;
-    if (Address >= NUMBER_OF_HOLDING_REGISTERS)
-    {
-        Tx_Buf[1] |= 0x80;
-        Tx_Buf[2] = ERROR_CODE_02;
-        Tx_Len = 3;
-    }
-    else
-    {
-        holdingRegisters[Address] = (uint16_t)Value;
-        /* ответ — эхо запроса */
-        for (unsigned char i = 0; i < 4; ++i)
-            Tx_Buf[2 + i] = ReceiveBuffer[2 + i];
-        Tx_Len = 6;
-    }
-    SendMessage();
-}
-#endif
-/******************************************************************************/
-
-/*
- * Function Name        : HandleModbusWriteMultipleRegisters
- * @How to use          : Modbus function 16 - Write multiple registers
- */
-#if MODBUS_WRITE_MULTIPLE_REGISTERS_ENABLED > 0
-void HandleModbusWriteMultipleRegisters(void)
-{
-    unsigned int StartAddress = ((unsigned int)ReceiveBuffer[2] << 8) + ReceiveBuffer[3];
-    unsigned int NumberOfRegisters = ((unsigned int)ReceiveBuffer[4] << 8) + ReceiveBuffer[5];
-
-    Tx_Buf[0] = MODBUS_SLAVE_ADDRESS;
-    Tx_Buf[1] = MODBUS_WRITE_MULTIPLE_REGISTERS;
+    Tx_Buf[1] = Function;
     if ((StartAddress + NumberOfRegisters) > NUMBER_OF_HOLDING_REGISTERS)
     {
         Tx_Buf[1] |= 0x80;
@@ -237,17 +178,20 @@ void HandleModbusWriteMultipleRegisters(void)
     {
         for (unsigned int i = 0; i < NumberOfRegisters; i++)
         {
-            unsigned int Value = ((unsigned int)ReceiveBuffer[7 + 2 * i] << 8) + ReceiveBuffer[8 + 2 * i];
+            unsigned int Value;
+            if (Function == MODBUS_WRITE_SINGLE_REGISTER)
+                Value = ((unsigned int)ReceiveBuffer[4] << 8) + ReceiveBuffer[5];
+            else
+                Value = ((unsigned int)ReceiveBuffer[7 + 2 * i] << 8) + ReceiveBuffer[8 + 2 * i];
             holdingRegisters[StartAddress + i] = (uint16_t)Value;
         }
-        /* ответ — эхо адреса и количества */
+        /* ответ — эхо адреса и значения/количества */
         for (unsigned char i = 0; i < 4; ++i)
             Tx_Buf[2 + i] = ReceiveBuffer[2 + i];
         Tx_Len = 6;
     }
     SendMessage();
 }
-#endif
 /******************************************************************************/
 
 /*
@@ -401,34 +345,22 @@ void ProcessModbus(void)
     {
         switch (Rx_Function) // Which function?
         {
-#if MODBUS_READ_INPUT_REGISTERS_ENABLED > 0
         case MODBUS_READ_INPUT_REGISTERS:
         {
-            HandleModbusReadInputRegisters();
+            HandleModbusReadRegisters(MODBUS_READ_INPUT_REGISTERS, inputRegisters, NUMBER_OF_INPUT_REGISTERS);
             break;
         }
-#endif
-#if MODBUS_READ_HOLDING_REGISTERS_ENABLED > 0
         case MODBUS_READ_HOLDING_REGISTERS:
         {
-            HandleModbusReadHoldingRegisters();
+            HandleModbusReadRegisters(MODBUS_READ_HOLDING_REGISTERS, holdingRegisters, NUMBER_OF_HOLDING_REGISTERS);
             break;
         }
-#endif
-#if MODBUSWRITE_SINGLE_REGISTER_ENABLED > 0
         case MODBUS_WRITE_SINGLE_REGISTER:
-        {
-            HandleModbusWriteSingleRegister();
-            break;
-        }
-#endif
-#if MODBUS_WRITE_MULTIPLE_REGISTERS_ENABLED > 0
         case MODBUS_WRITE_MULTIPLE_REGISTERS:
         {
-            HandleModbusWriteMultipleRegisters();
+            HandleModbusWriteRegisters(Rx_Function);
             break;
         }
-#endif
         default:
         {
             HandleModbusError(ERROR_CODE_01);

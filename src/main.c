@@ -35,9 +35,12 @@ int main(void)
     SysTick->CNT = 0;
     SysTick->CTLR = 0xF;
 
-    InitModbus(g_settings.interfaceRS485_slave_address);
     powermon_init(); /* PVD: контроль питания, прерывание по обоим фронтам */
-    meterInit();
+    meterInit();     /* загрузка настроек ДО InitModbus: адрес берётся из g_settings */
+
+    /* адрес слейва из настроек (дефолт 1); вызывать строго после meterInit,
+     * иначе g_settings ещё нулевая и адрес станет 0 = broadcast → молчание */
+    InitModbus(g_settings.interfaceRS485_slave_address);
 
     /* автовосстановление критических данных из flash */
     critical_payload_t critical;
