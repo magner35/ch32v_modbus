@@ -12,13 +12,14 @@
 #include "soft_timer.h"
 #include "eeprom.h"
 #include "meter.h"
+#include "powermon.h"
+#include "settings.h"
 #include "interpolation.h"
 
 /* Global define */
 #define MODBUS_ID 0x1
 
 /* Global Variable */
-soft_timer_t test_timer;
 soft_timer_t timer_100ms;
 soft_timer_t timer_10ms;
 
@@ -27,7 +28,6 @@ int main(void)
     NVIC_PriorityGroupConfig(NVIC_PriorityGroup_1);
     SystemCoreClockUpdate();
 
-    Delay_Init();
     BoardGpioInit();
     BoardTimer1Init();
     BoardTimer2Init();
@@ -41,24 +41,61 @@ int main(void)
     SysTick->CNT = 0;
     SysTick->CTLR = 0xF;
 
+    powermon_init(); /* PVD: контроль питания, прерывание по обоим фронтам */
+
     meterInit();
 
-    SoftTimerInit(&test_timer, 500, 0);
+    /* автовосстановление критических данных из flash */
+    critical_payload_t critical;
+    if (critical_init(&critical))
+    {
+        runtime_device = critical.runtime_device;
+    }
+    /* контрольная точка при старте: свежая запись в журнал при стабильном
+     * питании — заодно проверка тракта записи (см. critical_debug) */
+    critical.runtime_device = runtime_device;
+    critical_save(&critical, false);
+
     SoftTimerInit(&timer_100ms, 100, timer_100ms_callback);
     SoftTimerInit(&timer_10ms, 10, timer_10ms_callback);
 
-
+    bool critical_saved = false;
 
     while (1)
     {
+        if (powermon_failed())
+        {
+            if (!critical_saved)
+            {
+                /* разовая фиксация: сохранить и остановить всё */
+                critical_payload_t critical = {.runtime_device = runtime_device};
+                critical_debug |= 0x10; /* бит4: вход в аварийный путь */
+                if (critical_save(&critical, true))
+                    critical_debug |= 0x20; /* бит5: аварийная запись легла */
+                else
+                    critical_debug |= 0x40; /* бит6: запись НЕ легла */
+                critical_saved = true;
+
+                USART_ITConfig(USART1, USART_IT_RXNE, DISABLE); /* стоп обмен */
+                NVIC_DisableIRQ(TIM2_IRQn);                     /* стоп расчёты */
+                GPIO_SetBits(LED1_GPIO_PORT, LED1_GPIO_PIN);
+            }
+            /* ждём: либо питание окончательно пропадёт, либо PVD снимет аварию */
+            continue;
+        }
+
+        if (critical_saved)
+        {
+            /* питание восстановилось — продолжаем работу */
+            critical_saved = false;
+            GPIO_ResetBits(LED1_GPIO_PORT, LED1_GPIO_PIN);
+            NVIC_EnableIRQ(TIM2_IRQn);
+            USART_ITConfig(USART1, USART_IT_RXNE, ENABLE);
+        }
+
         ProcessModbus();
         SoftTimerCheck(&timer_100ms);
         SoftTimerCheck(&timer_10ms);
-        if (SoftTimerCheck(&test_timer))
-        {
-            // save_Counter_To_Flash(0xAAAA);
-            LED1_GPIO_PORT->OUTDR ^= LED1_GPIO_PIN;
-        }
     }
     return 0;
 }

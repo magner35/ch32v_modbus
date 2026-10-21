@@ -12,6 +12,8 @@
 #include "Modbus.h"
 #include "modbus_registers.h"
 #include "settings.h"
+#include "eeprom.h"
+#include "powermon.h"
 
 /* ── Тайминги ── */
 #define TIM_CLK_HZ 48000000UL
@@ -33,6 +35,10 @@
 volatile uint32_t valid_pulse_count = 0;
 volatile uint64_t sum_period_ticks = 0; /* uint64 на случай больших сумм */
 
+/* Наработка прибора, сек: инкремент в timer_100ms_callback, восстановление
+ * из flash при старте, сохранение при аварии питания */
+uint32_t runtime_device;
+
 #define MIN_PULSES_FOR_AVG 10 /* минимум для усреднения */
 #define MAX_WINDOW_CALLS 10   /* макс. окно = 1 с */
 
@@ -42,13 +48,9 @@ const float yValues[] = {1, 2, 3, 4, 5, 6};
 void timer_100ms_callback(void)
 {
     static uint8_t i = 0;
-    static uint32_t runtime_device;
     static float last_freq_hz = 0;
     static uint8_t counter = 0;
     static uint32_t impulses = 0;
-
-    uint8_t linearisation_points = 0;
-    float kf_value;
 
     counter++;
 
@@ -76,51 +78,32 @@ void timer_100ms_callback(void)
     }
     float rate = last_freq_hz * g_settings.multiplier_value_average;
 
-    // 1 sek regio
+    /* раз в секунду: наработка + пересчёт таблицы линеаризации */
     if (++i == 10)
     {
         i = 0;
-
         runtime_device++;
-
-        linearisation_points = settingsLpoints();
+        settingsLpoints();
     }
 
-    GPIO_SetBits(LED2_GPIO_PORT, LED2_GPIO_PIN);
-    if (g_settings.linearisation_function == INTERPOLATION_SPLINEB)
-    {
-        kf_value = interpolationConstrainedSpline(xValues, yValues, linearisation_points, last_freq_hz, 1); // 690 us
-    }
-    else if (g_settings.linearisation_function == INTERPOLATION_LINEAR)
-    {
-        kf_value = interpolationLinear(xValues, yValues, linearisation_points, last_freq_hz, 1); // 60 us
-    }
-    else
-        kf_value = g_settings.multiplier_value_average;
-    GPIO_ResetBits(LED2_GPIO_PORT, LED2_GPIO_PIN);
+    /* TODO: линеаризация расхода по lpoint_forward_* (вместо xValues/yValues) */
 
-    // holdingRegisters[6].ActValue = sum;
-    // holdingRegisters[7].ActValue = cnt;
-    inputRegisters[IREG_STATUS].ActValue = 1979U;
-    inputRegisters[IREG_ESTATUS].ActValue = 1983U;
     modbusFloatToRegister(rate, (uint16_t *)&inputRegisters[IREG_RATE].ActValue);
     modbusFloatToRegister(last_freq_hz, (uint16_t *)&inputRegisters[IREG_FREQUENCY].ActValue);
     modbusLongToRegister(impulses, (uint16_t *)&inputRegisters[IREG_IMPULSES].ActValue);
     modbusLongToRegister(runtime_device, (uint16_t *)&inputRegisters[IREG_RUNTIME_DEVICE].ActValue);
+
+    /* отладочный регистр: младший байт — журнал критических данных
+     * (бит0 найден, бит1 записан, бит2 верифицирован, бит3 прошлая сессия
+     * с PVD-сохранением, бит4 аварийный путь, бит5 запись легла, бит6 НЕ
+     * легла); биты 8-9 — PVDO при старте / PVD-прерывание;
+     * биты 12-15 — счётчик входов в аварию */
+    inputRegisters[IREG_DEBUG1].ActValue = (uint16_t)(critical_debug | ((uint16_t)powermon_debug << 8) | ((uint16_t)(powermon_fail_events & 0x0F) << 12));
 }
 
 void timer_10ms_callback(void)
 {
     GEN_OUT_PORT->OUTDR ^= GEN_OUT_PIN;
-}
-
-void TIM1_UP_IRQHandler(void) __attribute__((interrupt("WCH-Interrupt-fast")));
-void TIM1_UP_IRQHandler()
-{
-    if (TIM1->INTFR & TIM_FLAG_Update)
-    {
-        TIM1->INTFR = ~TIM_FLAG_Update;
-    }
 }
 
 void BoardTimer2Init(void)
