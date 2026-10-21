@@ -14,6 +14,5 @@
 #define GEN_OUT_PIN (GPIO_Pin_4)
 
 void BoardGpioInit(void);
-void BoardTimer1Init(void);
 
 #endif // _BOARD_H_

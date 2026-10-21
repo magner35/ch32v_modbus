@@ -138,7 +138,6 @@ enum
     X(units_time_base, ENUM, -, 3, TBASE_MIN)            /* 0 - сек, 1 - мин, 2 - час (TODO) */       \
     X(units_rate, ENUM, -, 3, UNITS_L)                   /* 0 - миллилитр, 1 - литр, 2 - метр куб. */ \
     X(units_total, ENUM, -, 3, UNITS_L)                  /* 0 - миллилитр, 1 - литр, 2 - метр куб. */ \
-    X(units_gtotal, ENUM, -, 3, UNITS_L)                 /* 0 - миллилитр, 1 - литр, 2 - метр куб. */ \
     X(aout_parameter, ENUM, -, 3, AOUT_RATE)             /* переменная для аналогового выхода */      \
     X(aout_treshold_4ma, FLOAT, -, -, 0.0f)              /* нижний порог */                           \
     X(aout_treshold_20ma, FLOAT, -, -, 0.0f)             /* верхний порог */                          \
@@ -185,6 +184,23 @@ enum
 #define ST_INIT_I8 ST_INIT_NUM
 #define ST_INIT_U16 ST_INIT_NUM
 #define ST_INIT_U32 ST_INIT_NUM
+
+/*----------------------------------------------------------------------------*/
+/*
+ * Коэффициенты пересчёта вычисляются на месте из таблиц (раньше кэшировались
+ * в csettings: 9 float + копии units - теперь их поля удалены ради ОЗУ).
+ * Таблицы - во флеше, выражение из 2-4 float-операций дешевле кэша в SRAM.
+ * Входы (mmeter/pmsettings) атомарны поштучно (ATOM в storePropertyValue).
+ */
+extern const float pow1000_tab[3]; /* units_* 0..2 = мл/л/м³ */
+extern const float pow60_tab[3];   /* time_base 0..2 = с/мин/ч */
+
+#define LPM_MULTIPLIER 60
+
+#define COEF_KF() (pow1000_tab[g_settings.multiplier_units] * g_settings.meter_correction)
+#define COEF_RATE() (pow1000_tab[g_settings.multiplier_units] / pow1000_tab[g_settings.units_rate] * pow60_tab[g_settings.units_time_base] * g_settings.meter_correction)
+#define COEF_RATELPM() (pow1000_tab[g_settings.multiplier_units] * LPM_MULTIPLIER * g_settings.meter_correction)
+#define COEF_TOTAL() (pow1000_tab[g_settings.units_total])
 
 /* ── Индексы настроек: SET_<имя> ───────────────────────────────────────── */
 
@@ -288,6 +304,8 @@ extern const uint16_t g_settings_offs[SETTINGS_COUNT]; /* offsetof(settings_t, �
 
 extern float lpoint_forward_frequency[LPOINTS]; /* таблица линеаризации */
 extern float lpoint_forward_value[LPOINTS];
+extern const float factory_lpoint_forward_frequency[LPOINTS]; /* заводские */
+extern const float factory_lpoint_forward_value[LPOINTS];
 extern uint8_t lpoints_count; /* эффективное число точек после нормализации */
 
 uint8_t settingsLpoints(void); /* нормализация таблицы + подсчёт точек (0 = мало точек) */

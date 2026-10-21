@@ -6,6 +6,7 @@
 
 #include "settings.h"
 #include <stddef.h>
+#include "filter.h"
 
 /* Таблицы линеаризации — массивы, в SETTINGS_TABLE не входят */
 float lpoint_forward_frequency[LPOINTS];
@@ -14,8 +15,18 @@ float lpoint_forward_value[LPOINTS];
 /* Эффективное число точек линеаризации (результат settingsLpoints) */
 uint8_t lpoints_count = 0;
 
+/* Целочисленные степени из крошечных диапазонов: вместо pow()/round()
+ * (double softfloat, ~1500 тактов на вызов) - константные таблицы.
+ * units_* ∈ {0,1,2} = мл/л/м³; units_time_base ∈ {0,1,2} = с/мин/ч.
+ * Сами коэффициенты пересчёта вычисляются на месте (COEF_* в settings.h):
+ * кэш из 9 float в csettings удалён ради ОЗУ, выражения из таблиц дёшевы. */
+const float pow1000_tab[3] = {1.0f, 1000.0f, 1000000.0f};
+const float pow60_tab[3] = {1.0f, 60.0f, 3600.0f};
+
 /* Рабочая копия настроек */
 settings_t g_settings;
+
+ema_filter_t ema_rate_filter;
 
 #define DESC_ROW(n, t, mn, mx, dv) ST_DESC_##t(n, mn, mx, dv)
 const setting_desc_t g_settings_desc[SETTINGS_COUNT] =
@@ -37,7 +48,20 @@ void meterInit(void)
     {
         settings_load_factory();
     }
+
+    /* таблицы линеаризации: заводские значения (заменяются данными из
+     * flash, когда таблицы войдут в сохраняемый образ настроек) */
+    for (uint8_t i = 0; i < LPOINTS; i++)
+    {
+        lpoint_forward_frequency[i] = factory_lpoint_forward_frequency[i];
+        lpoint_forward_value[i] = factory_lpoint_forward_value[i];
+    }
+    settingsLpoints(); /* сразу посчитать lpoints_count, не ждать 1 с */
+
     /* TODO: применить к железу — адрес/скорость/чётность RS485, пороги фильтра датчика */
+
+    // Initializing the filter with the damping time from the settings
+    emaFilterInit(&ema_rate_filter, g_settings.rate_damping, true);
 }
 
 void settings_load_factory(void)

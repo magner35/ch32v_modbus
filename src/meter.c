@@ -9,6 +9,7 @@
 #include "debug.h"
 #include "board.h"
 #include "interpolation.h"
+#include "filter.h"
 #include "Modbus.h"
 #include "modbus_registers.h"
 #include "settings.h"
@@ -33,17 +34,20 @@
 
 /* ── Счётчики ISR → main (volatile!) ── */
 volatile uint32_t valid_pulse_count = 0;
-volatile uint64_t sum_period_ticks = 0; /* uint64 на случай больших сумм */
+/* Сумма периодов за окно ≤ 1 с ≈ 48 млн тиков + один период — uint32
+ * хватает с запасом, а float-конверсия uint64 тянула ~300 Б библиотеки */
+volatile uint32_t sum_period_ticks = 0;
 
 /* Наработка прибора, сек: инкремент в timer_100ms_callback, восстановление
  * из flash при старте, сохранение при аварии питания */
 uint32_t runtime_device;
 
-#define MIN_PULSES_FOR_AVG 10 /* минимум для усреднения */
-#define MAX_WINDOW_CALLS 10   /* макс. окно = 1 с */
+#define MAX_WINDOW_CALLS 10 /* макс. окно = 1 с */
 
-const float xValues[] = {10, 20, 40, 80, 160, 320};
-const float yValues[] = {1, 2, 3, 4, 5, 6};
+// constant for converting milliliters to nanoliters
+#define ML_TO_NL_FACTOR 1000000.0F
+
+extern ema_filter_t ema_rate_filter;
 
 void timer_100ms_callback(void)
 {
@@ -51,19 +55,24 @@ void timer_100ms_callback(void)
     static float last_freq_hz = 0;
     static uint8_t counter = 0;
     static uint32_t impulses = 0;
+    static uint8_t linearisation_points = 0;
+    static int64_t totalnl = 0;
+    static int64_t gtotalnl = 0;
 
-    uint8_t linearisation_points = 0;
     float kf_value;
+    float rateavg = 0;
+    float rateavg_prev = 0;
+    float rate;
 
     counter++;
 
     __disable_irq();
     uint32_t cnt = valid_pulse_count;
-    uint64_t sum = sum_period_ticks;
+    uint32_t sum = sum_period_ticks;
     __enable_irq();
 
     /* Ждём, пока наберётся достаточно импульсов ИЛИ истечёт время */
-    if (cnt >= MIN_PULSES_FOR_AVG || counter >= MAX_WINDOW_CALLS)
+    if (cnt >= g_settings.rate_averaging || counter >= MAX_WINDOW_CALLS)
     {
         /* Окно закрыто — считаем */
         __disable_irq();
@@ -85,23 +94,49 @@ void timer_100ms_callback(void)
     {
         i = 0;
         runtime_device++;
-        settingsLpoints();
+        linearisation_points = settingsLpoints();
     }
-
-    /* TODO: линеаризация расхода по lpoint_forward_* (вместо xValues/yValues) */
 
     GPIO_SetBits(LED2_GPIO_PORT, LED2_GPIO_PIN);
     if (g_settings.linearisation)
     {
-        kf_value = interpolationConstrainedSpline(xValues, yValues, linearisation_points, last_freq_hz, 1); // 690 us
+        kf_value = interpolationConstrainedSpline(lpoint_forward_frequency, lpoint_forward_value, linearisation_points, last_freq_hz, 1); // 690 us
     }
     else
         kf_value = g_settings.multiplier_value_average;
     GPIO_ResetBits(LED2_GPIO_PORT, LED2_GPIO_PIN);
 
-    float rate = last_freq_hz * kf_value;
+    // rate calculation
+    float rate_raw = kf_value * last_freq_hz * COEF_RATE();
+    float rateMLPM = kf_value * last_freq_hz * COEF_RATELPM(); // unsigned
+
+    if (g_settings.rate_damping != 0)
+        rate = emaFilterUpdate(&ema_rate_filter, rate_raw);
+    else
+        rate = rate_raw; // unsigned
+
+    // total pack calculation
+    // calculate nanoliters per pulse (once per packet)
+    float nl_per_pulse = kf_value * COEF_KF() * ML_TO_NL_FACTOR;
+    // multiply the integer number of pulses by this factor and round it up
+    uint64_t total_packetnl = (uint64_t)((float)cnt * nl_per_pulse + 0.5F);
+    totalnl += total_packetnl;
+    gtotalnl += total_packetnl;
+    // Transferring data to the ml variables
+    float totalml = (float)totalnl / ML_TO_NL_FACTOR;
+    float gtotalml = (float)gtotalnl / ML_TO_NL_FACTOR;
+    // Recalculating the total, taking into account the fact that there are now nanoliters inside
+    float total = ((float)totalnl / ML_TO_NL_FACTOR) / COEF_TOTAL();
+    float gtotal = (float)gtotalnl / (ML_TO_NL_FACTOR * COEF_TOTAL());
 
     modbusFloatToRegister(rate, &inputRegisters[IREG_RATE]);
+    modbusFloatToRegister(total, &inputRegisters[IREG_TOTAL]);
+    modbusFloatToRegister(gtotal, &inputRegisters[IREG_GTOTAL]);
+
+    // modbusFloatToRegister(gtotal, &inputRegisters[IREG_GTOTAL]);
+    // modbusFloatToRegister(gtotal, &inputRegisters[IREG_GTOTAL]);
+    // modbusFloatToRegister(gtotal, &inputRegisters[IREG_GTOTAL]);
+
     modbusFloatToRegister(last_freq_hz, &inputRegisters[IREG_FREQUENCY]);
     modbusLongToRegister(impulses, &inputRegisters[IREG_IMPULSES]);
     modbusLongToRegister(runtime_device, &inputRegisters[IREG_RUNTIME_DEVICE]);
@@ -111,8 +146,10 @@ void timer_100ms_callback(void)
      * с PVD-сохранением, бит4 аварийный путь, бит5 запись легла, бит6 НЕ
      * легла); биты 8-9 — PVDO при старте / PVD-прерывание;
      * биты 12-15 — счётчик входов в аварию */
-    inputRegisters[IREG_DEBUG1] = (uint16_t)(critical_debug | ((uint16_t)powermon_debug << 8) |
-                                             ((uint16_t)(powermon_fail_events & 0x0F) << 12));
+    inputRegisters[IREG_DEBUG1] = (uint16_t)(critical_debug | ((uint16_t)powermon_debug << 8) | ((uint16_t)(powermon_fail_events & 0x0F) << 12));
+    inputRegisters[IREG_DEBUG2] = linearisation_points;
+    modbusFloatToRegister(kf_value, &inputRegisters[IREG_DEBUG3]);
+    inputRegisters[IREG_DEBUG5] = 1979;
 }
 
 void timer_10ms_callback(void)

@@ -28,14 +28,3 @@ void BoardGpioInit(void)
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(GEN_OUT_PORT, &GPIO_InitStructure);
 }
-
-void BoardTimer1Init(void)
-{
-    RCC->APB2PCENR |= RCC_APB2Periph_TIM1;
-
-    TIM1->ATRLR = 0xffff;
-    TIM1->PSC = 0xffff;
-    TIM1->SWEVGR = TIM_UG;
-
-    TIM1->CTLR1 |= TIM_CEN;
-}

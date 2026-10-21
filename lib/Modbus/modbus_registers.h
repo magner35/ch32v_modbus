@@ -24,6 +24,13 @@ enum
     IREG_METERCRC16,                          // format:U, type:U16
     IREG_ESTATUS,                             // format:U, type:U16
     IREG_DEBUG1,                              // format:U, type:U16, отладка
+    IREG_DEBUG2,                              // format:U, type:U16, отладка
+    IREG_DEBUG3,                              // format:U, type:U16, отладка
+    IREG_DEBUG4,                              // format:U, type:U16, отладка
+    IREG_DEBUG5,                              // format:U, type:U16, отладка
+    IREG_DEBUG6,                              // format:U, type:U16, отладка
+    IREG_DEBUG7,                              // format:U, type:U16, отладка
+    IREG_DEBUG8,                              // format:U, type:U16, отладка
     IREG_LASTREGISTER                         // last input register mark
 };
 

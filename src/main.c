@@ -16,9 +16,6 @@
 #include "settings.h"
 #include "interpolation.h"
 
-/* Global define */
-#define MODBUS_ID 0x1
-
 /* Global Variable */
 soft_timer_t timer_100ms;
 soft_timer_t timer_10ms;
@@ -29,10 +26,7 @@ int main(void)
     SystemCoreClockUpdate();
 
     BoardGpioInit();
-    BoardTimer1Init();
     BoardTimer2Init();
-
-    InitModbus(MODBUS_ID);
 
     // 1ms tick
     NVIC_EnableIRQ(SysTicK_IRQn);
@@ -41,8 +35,8 @@ int main(void)
     SysTick->CNT = 0;
     SysTick->CTLR = 0xF;
 
+    InitModbus(g_settings.interfaceRS485_slave_address);
     powermon_init(); /* PVD: контроль питания, прерывание по обоим фронтам */
-
     meterInit();
 
     /* автовосстановление критических данных из flash */
