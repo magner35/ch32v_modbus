@@ -157,7 +157,10 @@ void timer_10ms_callback(void)
     GEN_OUT_PORT->OUTDR ^= GEN_OUT_PIN;
 }
 
-void BoardTimer2Init(void)
+/* Прежняя реализация на SPL — оставлена для справки/отката, в прошивку
+ * не линкуется (нет вызовов, --gc-sections убирает). Развернуть при
+ * необходимости: заменить имя обратно и удалить регистровую версию. */
+void BoardTimer2Init_SPL(void)
 {
     // Инициализация TIM2 Input Capture
     GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -211,6 +214,47 @@ void BoardTimer2Init(void)
 
     /* 8. Старт таймера */
     TIM_Cmd(TIM2, ENABLE);
+}
+
+/* Инициализация TIM2 Input Capture — прямые записи в регистры.
+ * Эквивалент BoardTimer2Init_SPL. Экономит ~390 Б flash (TIM_ICInit,
+ * TIM_SetICxPrescaler, GPIO_Init, TIM_TimeBaseInit, TIM_Cmd/ITConfig,
+ * RCC_APBxPeriphClockCmd). */
+void BoardTimer2Init(void)
+{
+    /* 1. Тактирование TIM2 (APB1) и GPIOD (APB2) */
+    RCC->APB1PCENR |= RCC_APB1Periph_TIM2;
+    RCC->APB2PCENR |= RCC_APB2Periph_GPIOD;
+
+    /* 2. PD4 → вход с подтяжкой вверх: CNF=10, MODE=00, ODR=1 */
+    GPIOD->CFGLR = (GPIOD->CFGLR & ~((uint32_t)0xFu << 16)) | (0x8u << 16);
+    GPIOD->OUTDR |= GPIO_Pin_4;
+
+    /* 3. TimeBase: PSC=0 (48 МГц), ARR=0xFFFF, счёт вверх */
+    TIM2->PSC = TIM_PRESCALER - 1;
+    TIM2->ATRLR = 0xFFFF;
+    TIM2->SWEVGR = TIM_UG; /* перезагрузка прескалера */
+
+    /* 4. Захват: CH1 — TI1 по фронту (CC1S=01, IC1F=0100 → N=8),
+     *    CH2 — тот же TI1 по срезу (CC2S=10, IC2F=0100) */
+    TIM2->CHCTLR1 = (uint16_t)(TIM_IC2F_1 | TIM_IC2F_2 /* IC2F=0100 */ |
+                                (TIM_CC2S_1)            /* CC2S=10, косвенно TI1 */ |
+                                TIM_IC1F_1 | TIM_IC1F_2 /* IC1F=0100 */ |
+                                TIM_CC1S_0);            /* CC1S=01, напрямую TI1 */
+    /* полярность: CC1E=1/CC1P=0 (фронт), CC2E=1/CC2P=1 (срез) */
+    TIM2->CCER = (uint16_t)(TIM_CC1E | TIM_CC2E | TIM_CC2P);
+
+    /* 5. Прерывания: CC1, CC2, Update */
+    TIM2->DMAINTENR = TIM_UIE | TIM_CC1IE | TIM_CC2IE;
+
+    /* 6. NVIC: эквивалент NVIC_Init {preemption 1, sub 1} в группе 1:
+     * байт приоритета = (1<<7) | (1<<6) = 0xC0 */
+    NVIC_SetPriority(TIM2_IRQn, 0xC0);
+    NVIC_EnableIRQ(TIM2_IRQn);
+
+    /* 7. Сброс флагов и старт */
+    TIM2->INTFR = (uint16_t)~(TIM_IT_Update | TIM_IT_CC1 | TIM_IT_CC2);
+    TIM2->CTLR1 = TIM_CEN; /* счёт вверх (DIR=0 по умолчанию) */
 }
 
 /* ── Файл-скоуп переменные ISR ── */

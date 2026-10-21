@@ -29,7 +29,8 @@ void PVD_IRQHandler(void)
     failed = now_failed;
 }
 
-void powermon_init(void)
+/* Прежняя реализация на SPL — для справки/отката, в прошивку не линкуется. */
+void powermon_init_SPL(void)
 {
     EXTI_InitTypeDef EXTI_InitStructure = {0};
     NVIC_InitTypeDef NVIC_InitStructure = {0};
@@ -53,6 +54,31 @@ void powermon_init(void)
     NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
     NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&NVIC_InitStructure);
+
+    if (PWR_GetFlagStatus(PWR_FLAG_PVDO) != RESET)
+        powermon_debug |= 0x01; /* диагностика: PVDO установлен при старте */
+}
+
+/* Инициализация PVD — прямые записи в регистры. Эквивалент
+ * powermon_init_SPL, экономит ~250 Б flash (EXTI_Init, NVIC_Init,
+ * PWR_*, RCC_APBxPeriphClockCmd). */
+void powermon_init(void)
+{
+    /* тактирование PWR (APB1) и AFIO (APB2) */
+    RCC->APB1PCENR |= RCC_APB1Periph_PWR;
+    RCC->APB2PCENR |= RCC_APB2Periph_AFIO;
+
+    /* PVD: порог POWERMON_PVD_LEVEL (PLS[2:0], биты 7:5) + включение PVDE */
+    PWR->CTLR = (PWR->CTLR & ~((uint32_t)PWR_CTLR_PLS)) | POWERMON_PVD_LEVEL | PWR_CTLR_PVDE;
+
+    /* выход PVD → EXTI Line8: прерывание (не событие) по обоим фронтам */
+    EXTI->INTENR |= EXTI_INTENR_MR8; /* маска прерывания линии 8 */
+    EXTI->RTENR |= EXTI_INTENR_MR8;  /* триггер по фронту */
+    EXTI->FTENR |= EXTI_INTENR_MR8;  /* триггер по спаду */
+
+    /* авария питания — высший приоритет */
+    NVIC_SetPriority(PVD_IRQn, 0x00);
+    NVIC_EnableIRQ(PVD_IRQn);
 
     if (PWR_GetFlagStatus(PWR_FLAG_PVDO) != RESET)
         powermon_debug |= 0x01; /* диагностика: PVDO установлен при старте */

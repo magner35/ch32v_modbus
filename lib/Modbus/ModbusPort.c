@@ -1,13 +1,36 @@
 #include "ModbusPort.h"
 #include "debug.h"
+#include "settings.h"
 
 // Modbus RTU Variables
 volatile unsigned char ReceiveBuffer[MODBUS_RECEIVE_BUFFER_SIZE]; // Buffer to collect data from hardware
 volatile unsigned char ReceiveCounter = 0;                        // Collected data number
 
-// UART Initialize
-void ModBus_UART_Initialise(void)
+/* Прежняя реализация на SPL — оставлена для справки/отката, в прошивку
+ * не линкуется (нет вызовов). Вернуть: переименовать обратно. */
+void ModBus_UART_Initialise_SPL(void)
 {
+    /* Параметры интерфейса — из настроек (ЗОВЁТСЯ СТРОГО ПОСЛЕ meterInit!).
+     * Значения enum'ов см. SETTINGS_TABLE: baudrate 0-9, parity 0-2, stop 0/1 */
+    static const uint32_t baud_table[] = {1200, 2400, 4800, 9600, 14400, 19200, 28800, 38400, 57600, 115200};
+    uint32_t baud = baud_table[g_settings.interfaceRS485_baudrate % (sizeof(baud_table) / sizeof(baud_table[0]))];
+    uint16_t parity = USART_Parity_No;
+    uint16_t word_length = USART_WordLength_8b;
+
+    switch (g_settings.interfaceRS485_parity)
+    {
+    case 1:
+        parity = USART_Parity_Even;
+        word_length = USART_WordLength_9b; /* 8 данных + бит чётности */
+        break;
+    case 2:
+        parity = USART_Parity_Odd;
+        word_length = USART_WordLength_9b;
+        break;
+    default:
+        break;
+    }
+
     GPIO_InitTypeDef GPIO_InitStructure = {0};
 
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOD, ENABLE);
@@ -26,10 +49,12 @@ void ModBus_UART_Initialise(void)
 
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
 
-    USART_InitStructure.USART_BaudRate = 9600;
-    USART_InitStructure.USART_WordLength = USART_WordLength_8b;
-    USART_InitStructure.USART_StopBits = USART_StopBits_1;
-    USART_InitStructure.USART_Parity = USART_Parity_No;
+    USART_InitStructure.USART_BaudRate = baud;
+    USART_InitStructure.USART_WordLength = word_length;
+    USART_InitStructure.USART_StopBits = (g_settings.interfaceRS485_stopbits)
+                                             ? USART_StopBits_2
+                                             : USART_StopBits_1;
+    USART_InitStructure.USART_Parity = parity;
     USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
     USART_InitStructure.USART_Mode = USART_Mode_Tx | USART_Mode_Rx;
     USART_Init(USART1, &USART_InitStructure);
@@ -49,6 +74,53 @@ void ModBus_UART_Initialise(void)
     GPIO_Init(RS485_DE_GPIO_PORT, &GPIO_InitStructure);
 
     USART_Cmd(USART1, ENABLE);
+}
+
+/* Инициализация USART1 (RS-485) — прямые записи в регистры.
+ * Эквивалент ModBus_UART_Initialise_SPL, экономит ~360 Б flash
+ * (USART_Init, RCC_GetClocksFreq, GPIO_Init, NVIC_Init).
+ * Параметры — из настроек, ЗОВЁТСЯ СТРОГО ПОСЛЕ meterInit! */
+void ModBus_UART_Initialise(void)
+{
+    static const uint32_t baud_table[] = {1200, 2400, 4800, 9600, 14400, 19200, 28800, 38400, 57600, 115200};
+    uint32_t baud = baud_table[g_settings.interfaceRS485_baudrate % (sizeof(baud_table) / sizeof(baud_table[0]))];
+
+    /* CTLR1: UE + RXNEIE + TE + RE; при чётности — 9-битное слово
+     * (8 данных + бит чётности), PS=1 для нечётной */
+    uint16_t ctlr1 = USART_CTLR1_UE | USART_CTLR1_RXNEIE | USART_Mode_Tx | USART_Mode_Rx;
+    switch (g_settings.interfaceRS485_parity)
+    {
+    case 1:
+        ctlr1 |= USART_WordLength_9b | USART_Parity_Even;
+        break;
+    case 2:
+        ctlr1 |= USART_WordLength_9b | USART_Parity_Odd;
+        break;
+    default:
+        break;
+    }
+    uint16_t ctlr2 = (g_settings.interfaceRS485_stopbits) ? USART_StopBits_2 : 0;
+
+    /* Тактирование: GPIOD/GPIOC (APB2), USART1 (APB2) */
+    RCC->APB2PCENR |= RCC_APB2Periph_GPIOD | RCC_APB2Periph_GPIOC | RCC_APB2Periph_USART1;
+
+    /* PD5 (TX) — альтернативная функция push-pull: CNF=10,MODE=11 (50 МГц)
+     * PD6 (RX) — вход плавающий: CNF=01,MODE=00
+     * PC3 (DE) — выход push-pull 50 МГц: CNF=00,MODE=11 */
+    GPIOD->CFGLR = (GPIOD->CFGLR & ~((uint32_t)0xFu << 20)) | (0xBu << 20);
+    GPIOD->CFGLR = (GPIOD->CFGLR & ~((uint32_t)0xFu << 24)) | (0x4u << 24);
+    GPIOC->CFGLR = (GPIOC->CFGLR & ~((uint32_t)0xFu << 12)) | (0x3u << 12);
+    set_rs485_de_disable(); /* приём по умолчанию */
+
+    /* USART1: PCLK2 = SystemCoreClock (48 МГц) */
+    USART1->CTLR2 = ctlr2;
+    USART1->CTLR3 = 0; /* без аппаратного управления потоком */
+    USART1->BRR = (SystemCoreClock + baud / 2) / baud;
+    USART1->CTLR1 = ctlr1;
+
+    /* приоритет как у SPL-версии: preemption 1, sub 1 → 0xC0 */
+    NVIC_SetPriority(USART1_IRQn, 0xC0);
+    NVIC_EnableIRQ(USART1_IRQn);
 }
 
 /*************************Interrupt Fonction Slave*****************************/
