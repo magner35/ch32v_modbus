@@ -22,7 +22,7 @@
 #define CRIT_MAINTAIN_SLOT (CRIT_SLOTS / 2) /* порог обслуживания при старте */
 
 #define CRITICAL_MAGIC   0x43524954UL /* "CRIT" */
-#define CRITICAL_VERSION 4            /* v4: слот 64 Б, быстрая запись */
+#define CRITICAL_VERSION 5            /* v5: слот 64 Б, быстрая запись */
 
 typedef struct
 {

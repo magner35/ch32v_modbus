@@ -32,6 +32,8 @@
 #define PERIOD_MAX_TICKS (TIM_TICK_HZ / FREQ_MIN_HZ) /* 4 800 000 */
 #define PERIOD_MIN_TICKS (TIM_TICK_HZ / FREQ_MAX_HZ) /*    10 666 */
 
+#define POWERON_TIMEOUT 10
+
 /* ── Счётчики ISR → main (volatile!) ── */
 volatile uint32_t valid_pulse_count = 0;
 /* Сумма периодов за окно ≤ 1 с ≈ 48 млн тиков + один период — uint32
@@ -41,12 +43,17 @@ volatile uint32_t sum_period_ticks = 0;
 /* Наработка прибора, сек: инкремент в timer_100ms_callback, восстановление
  * из flash при старте, сохранение при аварии питания */
 uint32_t runtime_device;
+uint32_t runtime_flowmeter;
 
 /* Накопители объёма (нанолитры, uint64 — без потери точности) и счётчик
  * импульсов: восстановление из flash при старте, сохранение при аварии */
 uint64_t totalnl = 0;
 uint64_t gtotalnl = 0;
 uint32_t impulses = 0;
+
+/* Счётчик включений: +1 после 10 с устойчивой работы каждой сессии,
+ * восстанавливается из flash */
+uint16_t poweron_counter = 0;
 
 #define MAX_WINDOW_CALLS 10 /* макс. окно = 1 с */
 
@@ -63,11 +70,15 @@ void timer_100ms_callback(void)
     static float last_freq_hz = 0;
     static uint8_t counter = 0;
     static uint8_t rateavg_counter = 0;
+    static uint8_t poweron_timer;
+    static bool power_flag;
 
     float kf_value;
     float rateavg = 0;
     float rateavg_prev = 0;
     float rate;
+
+    GPIO_SetBits(LED2_GPIO_PORT, LED2_GPIO_PIN);
 
     counter++;
 
@@ -94,14 +105,14 @@ void timer_100ms_callback(void)
         impulses = impulses + cnt;
     }
 
-    GPIO_SetBits(LED2_GPIO_PORT, LED2_GPIO_PIN);
+    // GPIO_SetBits(LED2_GPIO_PORT, LED2_GPIO_PIN);
     if (g_settings.linearisation)
     {
         kf_value = interpolationConstrainedSpline(lpoint_forward_frequency, lpoint_forward_value, lpoints_count, last_freq_hz, 1); // 690 us
     }
     else
         kf_value = g_settings.multiplier_value_average;
-    GPIO_ResetBits(LED2_GPIO_PORT, LED2_GPIO_PIN);
+    // GPIO_ResetBits(LED2_GPIO_PORT, LED2_GPIO_PIN);
 
     // rate calculation
     float rate_raw = kf_value * last_freq_hz * COEF_RATE();
@@ -132,6 +143,10 @@ void timer_100ms_callback(void)
     {
         i = 0;
         runtime_device++;
+        if (last_freq_hz != 0)
+        {
+            runtime_flowmeter++;
+        }
 
         // ratemax_rate_lpm
         rateavg = rateavg + rateMLPM;
@@ -148,6 +163,16 @@ void timer_100ms_callback(void)
             }
             rateavg = 0;
         }
+
+        if (!power_flag)
+        {
+            poweron_timer++;
+            if (poweron_timer == POWERON_TIMEOUT)
+            {
+                power_flag = true;
+                poweron_counter++;
+            }
+        }
     }
 
     modbusFloatToRegister(rate, &inputRegisters[IREG_RATE]);
@@ -162,6 +187,9 @@ void timer_100ms_callback(void)
     modbusFloatToRegister(last_freq_hz, &inputRegisters[IREG_FREQUENCY]);
     modbusLongToRegister(impulses, &inputRegisters[IREG_IMPULSES]);
     modbusLongToRegister(runtime_device, &inputRegisters[IREG_RUNTIME_DEVICE]);
+    modbusLongToRegister(runtime_flowmeter, &inputRegisters[IREG_RUNTIME_FLOWMETER]);
+
+    inputRegisters[IREG_POWERON_NUMBER] = poweron_counter;
 
     /* отладочный регистр: младший байт — журнал критических данных
      * (бит0 найден, бит1 записан, бит2 верифицирован, бит3 прошлая сессия
@@ -172,6 +200,8 @@ void timer_100ms_callback(void)
     inputRegisters[IREG_DEBUG2] = lpoints_count;
     modbusFloatToRegister(kf_value, &inputRegisters[IREG_DEBUG3]);
     inputRegisters[IREG_DEBUG5] = 1979;
+
+    GPIO_ResetBits(LED2_GPIO_PORT, LED2_GPIO_PIN);
 }
 
 void timer_10ms_callback(void)
