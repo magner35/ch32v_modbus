@@ -47,10 +47,16 @@ int main(void)
     if (critical_init(&critical))
     {
         runtime_device = critical.runtime_device;
+        impulses = critical.impulses;
+        totalnl = critical.totalnl;
+        gtotalnl = critical.gtotalnl;
     }
     /* контрольная точка при старте: свежая запись в журнал при стабильном
      * питании — заодно проверка тракта записи (см. critical_debug) */
     critical.runtime_device = runtime_device;
+    critical.impulses = impulses;
+    critical.totalnl = totalnl;
+    critical.gtotalnl = gtotalnl;
     critical_save(&critical, false);
 
     SoftTimerInit(&timer_100ms, 100, timer_100ms_callback);
@@ -65,7 +71,11 @@ int main(void)
             if (!critical_saved)
             {
                 /* разовая фиксация: сохранить и остановить всё */
-                critical_payload_t critical = {.runtime_device = runtime_device};
+                critical_payload_t critical = {
+                    .runtime_device = runtime_device,
+                    .impulses = impulses,
+                    .totalnl = totalnl,
+                    .gtotalnl = gtotalnl};
                 critical_debug |= 0x10; /* бит4: вход в аварийный путь */
                 if (critical_save(&critical, true))
                     critical_debug |= 0x20; /* бит5: аварийная запись легла */

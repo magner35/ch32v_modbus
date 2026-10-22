@@ -4,6 +4,9 @@
 #include <stdint.h>
 
 extern uint32_t runtime_device; /* наработка прибора, сек */
+extern uint64_t totalnl;       /* накопленный объём, нл */
+extern uint64_t gtotalnl;      /* общий накопленный объём, нл */
+extern uint32_t impulses;      /* счётчик импульсов */
 
 void timer_100ms_callback(void);
 void timer_10ms_callback(void);

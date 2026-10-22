@@ -42,6 +42,12 @@ volatile uint32_t sum_period_ticks = 0;
  * из flash при старте, сохранение при аварии питания */
 uint32_t runtime_device;
 
+/* Накопители объёма (нанолитры, uint64 — без потери точности) и счётчик
+ * импульсов: восстановление из flash при старте, сохранение при аварии */
+uint64_t totalnl = 0;
+uint64_t gtotalnl = 0;
+uint32_t impulses = 0;
+
 #define MAX_WINDOW_CALLS 10 /* макс. окно = 1 с */
 
 // constant for converting milliliters to nanoliters
@@ -56,10 +62,6 @@ void timer_100ms_callback(void)
     static uint8_t i = 0;
     static float last_freq_hz = 0;
     static uint8_t counter = 0;
-    static uint32_t impulses = 0;
-    static uint8_t linearisation_points = 0;
-    static uint64_t totalnl = 0;
-    static uint64_t gtotalnl = 0;
     static uint8_t rateavg_counter = 0;
 
     float kf_value;
@@ -95,7 +97,7 @@ void timer_100ms_callback(void)
     GPIO_SetBits(LED2_GPIO_PORT, LED2_GPIO_PIN);
     if (g_settings.linearisation)
     {
-        kf_value = interpolationConstrainedSpline(lpoint_forward_frequency, lpoint_forward_value, linearisation_points, last_freq_hz, 1); // 690 us
+        kf_value = interpolationConstrainedSpline(lpoint_forward_frequency, lpoint_forward_value, lpoints_count, last_freq_hz, 1); // 690 us
     }
     else
         kf_value = g_settings.multiplier_value_average;
@@ -130,7 +132,6 @@ void timer_100ms_callback(void)
     {
         i = 0;
         runtime_device++;
-        linearisation_points = settingsLpoints();
 
         // ratemax_rate_lpm
         rateavg = rateavg + rateMLPM;
@@ -168,7 +169,7 @@ void timer_100ms_callback(void)
      * легла); биты 8-9 — PVDO при старте / PVD-прерывание;
      * биты 12-15 — счётчик входов в аварию */
     inputRegisters[IREG_DEBUG1] = (uint16_t)(critical_debug | ((uint16_t)powermon_debug << 8) | ((uint16_t)(powermon_fail_events & 0x0F) << 12));
-    inputRegisters[IREG_DEBUG2] = linearisation_points;
+    inputRegisters[IREG_DEBUG2] = lpoints_count;
     modbusFloatToRegister(kf_value, &inputRegisters[IREG_DEBUG3]);
     inputRegisters[IREG_DEBUG5] = 1979;
 }

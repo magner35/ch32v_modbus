@@ -56,7 +56,7 @@ void meterInit(void)
         lpoint_forward_frequency[i] = factory_lpoint_forward_frequency[i];
         lpoint_forward_value[i] = factory_lpoint_forward_value[i];
     }
-    settingsLpoints(); /* сразу посчитать lpoints_count, не ждать 1 с */
+    lpoints_count = settingsLpoints(); /* сразу посчитать lpoints_count, не ждать 1 с */
 
     /* TODO: применить к железу — адрес/скорость/чётность RS485, пороги фильтра датчика */
 
