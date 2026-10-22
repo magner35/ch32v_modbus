@@ -67,7 +67,7 @@ extern ema_filter_t ema_rate_filter;
 void timer_100ms_callback(void)
 {
     static uint8_t i = 0;
-    static float last_freq_hz = 0;
+    static float frequency = 0;
     static uint8_t counter = 0;
     static uint8_t rateavg_counter = 0;
     static uint8_t poweron_timer;
@@ -87,7 +87,9 @@ void timer_100ms_callback(void)
     uint32_t sum = sum_period_ticks;
     __enable_irq();
 
-    /* Ждём, пока наберётся достаточно импульсов ИЛИ истечёт время */
+    /* Ждём, пока наберётся достаточно импульсов ИЛИ истечёт время.
+     * rate_averaging ограничено снизу единицей в SETTINGS_TABLE —
+     * окно не закрывается с нулём импульсов, частота не мерцает */
     if (cnt >= g_settings.rate_averaging || counter >= MAX_WINDOW_CALLS)
     {
         /* Окно закрыто — считаем */
@@ -101,22 +103,22 @@ void timer_100ms_callback(void)
         {
             freq_hz = TIM_TICK_HZ / ((float)sum / cnt);
         }
-        last_freq_hz = freq_hz;
+        frequency = freq_hz;
         impulses = impulses + cnt;
     }
 
     // GPIO_SetBits(LED2_GPIO_PORT, LED2_GPIO_PIN);
     if (g_settings.linearisation)
     {
-        kf_value = interpolationConstrainedSpline(lpoint_forward_frequency, lpoint_forward_value, lpoints_count, last_freq_hz, 1); // 690 us
+        kf_value = interpolationConstrainedSpline(lpoint_forward_frequency, lpoint_forward_value, lpoints_count, frequency, 1); // 690 us
     }
     else
         kf_value = g_settings.multiplier_value_average;
     // GPIO_ResetBits(LED2_GPIO_PORT, LED2_GPIO_PIN);
 
     // rate calculation
-    float rate_raw = kf_value * last_freq_hz * COEF_RATE();
-    float rateMLPM = kf_value * last_freq_hz * COEF_RATELPM(); // unsigned
+    float rate_raw = kf_value * frequency * COEF_RATE();
+    float rateMLPM = kf_value * frequency * COEF_RATELPM(); // unsigned
 
     if (g_settings.rate_damping != 0)
         rate = emaFilterUpdate(&ema_rate_filter, rate_raw);
@@ -143,7 +145,7 @@ void timer_100ms_callback(void)
     {
         i = 0;
         runtime_device++;
-        if (last_freq_hz != 0)
+        if (frequency != 0)
         {
             runtime_flowmeter++;
         }
@@ -184,7 +186,7 @@ void timer_100ms_callback(void)
     modbusLongToRegister(itotalml, &inputRegisters[IREG_ITOTALML]);
     modbusLongToRegister(igtotalml, &inputRegisters[IREG_IGTOTALML]);
 
-    modbusFloatToRegister(last_freq_hz, &inputRegisters[IREG_FREQUENCY]);
+    modbusFloatToRegister(frequency, &inputRegisters[IREG_FREQUENCY]);
     modbusLongToRegister(impulses, &inputRegisters[IREG_IMPULSES]);
     modbusLongToRegister(runtime_device, &inputRegisters[IREG_RUNTIME_DEVICE]);
     modbusLongToRegister(runtime_flowmeter, &inputRegisters[IREG_RUNTIME_FLOWMETER]);

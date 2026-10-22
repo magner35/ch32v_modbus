@@ -12,6 +12,7 @@
 #include "soft_timer.h"
 #include "eeprom.h"
 #include "meter.h"
+#include "modbus_control.h"
 #include "powermon.h"
 #include "settings.h"
 #include "interpolation.h"
@@ -107,6 +108,7 @@ int main(void)
         }
 
         ProcessModbus();
+        modbusControl(); /* диспетчер команд HREG_CONTROL */
         SoftTimerCheck(&timer_100ms);
         SoftTimerCheck(&timer_10ms);
     }

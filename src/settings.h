@@ -142,7 +142,7 @@ enum
     X(aout_treshold_4ma, FLOAT, -, -, 0.0f)              /* нижний порог */                           \
     X(aout_treshold_20ma, FLOAT, -, -, 0.0f)             /* верхний порог */                          \
     X(rate_damping, U8, 0, 99, 0)                        /* сек демпфирования*/                       \
-    X(rate_averaging, U8, 0, 255, 0)                     /* количество импульсов для усреднения */    \
+    X(rate_averaging, U8, 1, 255, 1)                     /* количество импульсов для усреднения */    \
     X(input_sens, ENUM, -, 4, ILEVEL_40)                 /* чувствительность по входу */              \
     X(sensor_filter_freq_high, ENUM, -, 5, FILTERHF_OFF) /* индекс, не Гц: сейчас 4500 Гц (TODO) */   \
     X(sensor_filter_freq_low, U8, 0, 255, 0)             /* ФНЧ Гц */                                 \

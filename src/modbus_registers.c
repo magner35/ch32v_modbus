@@ -45,26 +45,29 @@ float modbusRegisterToFloat(uint16_t *src)
 }
 
 /*----------------------------------------------------------------------------*/
-// Массовое копирование массива float в регистры
+// Массовое копирование массива float в регистры.
+// Порядок слов — как у modbusFloatToRegister: [0] младшее, [1] старшее
+// (в проекте-доноре было наоборот — обратный порядок против остальных
+// float-регистров)
 void floatToRegCopy(float source[], uint16_t dest[], uint8_t count)
 {
     uint32_t temp;
     for (uint8_t i = 0; i < count; i++)
     {
         memcpy(&temp, &source[i], sizeof(float));
-        dest[i * 2] = (temp >> 16) & 0xFFFF;
-        dest[i * 2 + 1] = temp & 0xFFFF;
+        dest[i * 2] = temp & 0xFFFF;
+        dest[i * 2 + 1] = (temp >> 16) & 0xFFFF;
     }
 }
 
 /*----------------------------------------------------------------------------*/
-// Массовое копирование регистров в массив float
+// Массовое копирование регистров в массив float (обратная к floatToRegCopy)
 void regToFloatCopy(uint16_t dest[], float source[], uint8_t count)
 {
     uint32_t temp;
     for (uint8_t i = 0; i < count; i++)
     {
-        temp = ((uint32_t)dest[i * 2] << 16) | (dest[i * 2 + 1] & 0xFFFF);
+        temp = ((uint32_t)dest[i * 2 + 1] << 16) | (dest[i * 2] & 0xFFFF);
         memcpy(&source[i], &temp, sizeof(float));
     }
 }

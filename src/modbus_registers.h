@@ -84,12 +84,9 @@ enum
     EMPTY,
     HCTRL_SYSTEM_WRITE,     // password SYSTEM
     HCTRL_METER_WRITE,      // password METER
-    HCTRL_METER_LPFV_WRITE, // linearisation points forward value set - password METER
-    HCTRL_METER_LPFF_WRITE, // linearisation points forward frequenvy set - password METER
     HCTRL_SERVICE_RESET,    // password SERVICE
-    HCTRL_METER_LPFV_READ,  // linearisation points forward value read
-    HCTRL_METER_LPFF_READ,  // linearisation points forward frequency read
     HCTRL_ALL_READ,         // read back
+    HCTRL_DEFAULT,          // password SYSTEM - возврат заводских настроек
 };
 /*----------------------------------------------------------------------------*/
 

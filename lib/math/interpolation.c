@@ -209,19 +209,22 @@ static float getRightSecondDerivate(float const x[], float const y[], int numVal
 
 float interpolationConstrainedSpline(float const xValues[], float const yValues[], int numValues, float pointX, bool trim)
 {
-    if (trim)
+    /* Вне таблицы — линейная экстраполяция по крайнему отрезку:
+     * компактная замена библиотечного interpolationLinear (~30 Б
+     * вместо ~400). Параметр trim сохранён в сигнатуре, игнорируется. */
+    (void)trim;
+    if (pointX <= xValues[0] || pointX >= xValues[numValues - 1])
     {
+        if (numValues < 2)
+            return yValues[0]; /* вырожденная таблица */
         if (pointX <= xValues[0])
-            return yValues[0];
-        if (pointX >= xValues[numValues - 1])
-            return yValues[numValues - 1];
-    }
-    else
-    {
-        if (pointX <= xValues[0])
-            return interpolationLinear(xValues, yValues, numValues, pointX, false);
-        if (pointX >= xValues[numValues - 1])
-            return interpolationLinear(xValues, yValues, numValues, pointX, false);
+        {
+            float k = (yValues[1] - yValues[0]) / (xValues[1] - xValues[0]);
+            return yValues[0] + k * (pointX - xValues[0]);
+        }
+        int j = numValues - 1;
+        float k = (yValues[j] - yValues[j - 1]) / (xValues[j] - xValues[j - 1]);
+        return yValues[j] + k * (pointX - xValues[j]);
     }
 
     int i = 0;
