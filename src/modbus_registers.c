@@ -29,8 +29,8 @@ void modbusFloatToRegister(float src, uint16_t *dst)
 {
     uint32_t temp;
     memcpy(&temp, &src, sizeof(float));
-    dst[1] = (temp >> 16) & 0xFFFF;
-    dst[0] = temp & 0xFFFF;
+    dst[0] = (temp >> 16) & 0xFFFF;
+    dst[1] = temp & 0xFFFF;
 }
 
 /*----------------------------------------------------------------------------*/

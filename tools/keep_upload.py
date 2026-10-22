@@ -48,3 +48,8 @@ env.AddPlatformTarget(
     ],
     "Dump critical-data journal page",
 )
+
+# Примечание: подмена Upload для env *_keep сделана в platformio.ini
+# (upload_protocol = custom + upload_command) — надёжнее, чем Replace здесь:
+# pre-скрипты выполняются ДО построения цели upload платформой, и её
+# env.Replace(UPLOADCMD=...) затирал бы нашу подмену.
