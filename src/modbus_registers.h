@@ -10,27 +10,30 @@
 
 enum
 {
-    IREG_STATUS,                              // format:U, type:U16
-    IREG_RATE,                                // format:F, type:FLOAT
-    PREV_LONG_MEMBER(IREG_RATELPM),           // format:F, type:FLOAT
-    PREV_LONG_MEMBER(IREG_TOTAL),             // format:F, type:FLOAT
-    PREV_LONG_MEMBER(IREG_GTOTAL),            // format:F, type:FLOAT
-    PREV_LONG_MEMBER(IREG_FREQUENCY),         // format:F, type:FLOAT
-    PREV_LONG_MEMBER(IREG_IMPULSES),          // format:UL, type:U32
-    PREV_LONG_MEMBER(IREG_RATEMAXLPM),        // format:F, type:FLOAT
-    PREV_LONG_MEMBER(IREG_RUNTIME_FLOWMETER), // format:UL, type:TIME
-    PREV_LONG_MEMBER(IREG_RUNTIME_DEVICE),    // format:UL, type:TIME
-    PREV_LONG_MEMBER(IREG_POWERON_NUMBER),    // format:U, type:U16
-    IREG_METERCRC16,                          // format:U, type:U16
-    IREG_ESTATUS,                             // format:U, type:U16
-    IREG_DEBUG1,                              // format:U, type:U16, отладка
-    IREG_DEBUG2,                              // format:U, type:U16, отладка
-    IREG_DEBUG3,                              // format:U, type:U16, отладка
-    IREG_DEBUG4,                              // format:U, type:U16, отладка
-    IREG_DEBUG5,                              // format:U, type:U16, отладка
-    IREG_DEBUG6,                              // format:U, type:U16, отладка
-    IREG_DEBUG7,                              // format:U, type:U16, отладка
-    IREG_DEBUG8,                              // format:U, type:U16, отладка
+    IREG_STATUS,                              // format:U, type:binary, unit:бит
+    IREG_RATELPM,                             // format:F, type:f32, unit:л/м
+    PREV_LONG_MEMBER(IREG_RATE),              // format:F, type:f32, unit:тек.
+    PREV_LONG_MEMBER(IREG_TOTAL),             // format:F, type:f32, unit:тек.
+    PREV_LONG_MEMBER(IREG_GTOTAL),            // format:F, type:f32, unit:тек.
+    PREV_LONG_MEMBER(IREG_IRATEML),           // format:UL, type:u32, unit:мл/м
+    PREV_LONG_MEMBER(IREG_ITOTALML),          // format:UL, type:u32, unit:мл
+    PREV_LONG_MEMBER(IREG_IGTOTALML),         // format:UL, type:u32, unit:мл
+    PREV_LONG_MEMBER(IREG_FREQUENCY),         // format:F, type:f32, unit:Гц
+    PREV_LONG_MEMBER(IREG_IMPULSES),          // format:UL, type:u32, unit:
+    PREV_LONG_MEMBER(IREG_RATEMAXLPM),        // format:F, type:f32, unit:л/м
+    PREV_LONG_MEMBER(IREG_RUNTIME_FLOWMETER), // format:UL, type:u32, unit:с
+    PREV_LONG_MEMBER(IREG_RUNTIME_DEVICE),    // format:UL, type:u32, unit:с
+    PREV_LONG_MEMBER(IREG_POWERON_NUMBER),    // format:U, type:U16, unit:
+    IREG_METERCRC16,                          // format:U, type:U16, unit:
+    IREG_ESTATUS,                             // format:U, type:binary, unit:бит
+    IREG_DEBUG1,                              // format:U, type:binary, unit:бит
+    IREG_DEBUG2,                              // format:U, type:U16, unit:
+    IREG_DEBUG3,                              // format:U, type:U16, unit:
+    IREG_DEBUG4,                              // format:U, type:U16, unit:
+    IREG_DEBUG5,                              // format:U, type:U16, unit:
+    IREG_DEBUG6,                              // format:U, type:U16, unit:
+    IREG_DEBUG7,                              // format:U, type:U16, unit:
+    IREG_DEBUG8,                              // format:U, type:U16, unit:
     IREG_LASTREGISTER                         // last input register mark
 };
 

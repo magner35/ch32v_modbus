@@ -47,6 +47,8 @@ uint32_t runtime_device;
 // constant for converting milliliters to nanoliters
 #define ML_TO_NL_FACTOR 1000000.0F
 
+#define RATEMAX_PERIOD 5
+
 extern ema_filter_t ema_rate_filter;
 
 void timer_100ms_callback(void)
@@ -56,8 +58,9 @@ void timer_100ms_callback(void)
     static uint8_t counter = 0;
     static uint32_t impulses = 0;
     static uint8_t linearisation_points = 0;
-    static int64_t totalnl = 0;
-    static int64_t gtotalnl = 0;
+    static uint64_t totalnl = 0;
+    static uint64_t gtotalnl = 0;
+    static uint8_t rateavg_counter = 0;
 
     float kf_value;
     float rateavg = 0;
@@ -89,14 +92,6 @@ void timer_100ms_callback(void)
         impulses = impulses + cnt;
     }
 
-    /* раз в секунду: наработка + пересчёт таблицы линеаризации */
-    if (++i == 10)
-    {
-        i = 0;
-        runtime_device++;
-        linearisation_points = settingsLpoints();
-    }
-
     GPIO_SetBits(LED2_GPIO_PORT, LED2_GPIO_PIN);
     if (g_settings.linearisation)
     {
@@ -114,6 +109,7 @@ void timer_100ms_callback(void)
         rate = emaFilterUpdate(&ema_rate_filter, rate_raw);
     else
         rate = rate_raw; // unsigned
+    uint32_t irate = rateMLPM;
 
     // total pack calculation
     // calculate nanoliters per pulse (once per packet)
@@ -123,19 +119,44 @@ void timer_100ms_callback(void)
     totalnl += total_packetnl;
     gtotalnl += total_packetnl;
     // Transferring data to the ml variables
-    float totalml = (float)totalnl / ML_TO_NL_FACTOR;
-    float gtotalml = (float)gtotalnl / ML_TO_NL_FACTOR;
+    uint32_t itotalml = totalnl / ML_TO_NL_FACTOR;
+    uint32_t igtotalml = gtotalnl / ML_TO_NL_FACTOR;
     // Recalculating the total, taking into account the fact that there are now nanoliters inside
     float total = ((float)totalnl / ML_TO_NL_FACTOR) / COEF_TOTAL();
     float gtotal = (float)gtotalnl / (ML_TO_NL_FACTOR * COEF_TOTAL());
 
+    /* раз в секунду: наработка + пересчёт таблицы линеаризации */
+    if (++i == 10)
+    {
+        i = 0;
+        runtime_device++;
+        linearisation_points = settingsLpoints();
+
+        // ratemax_rate_lpm
+        rateavg = rateavg + rateMLPM;
+        rateavg_counter++;
+        if (rateavg_counter == RATEMAX_PERIOD)
+        {
+            rateavg_counter = 0;
+            rateavg = rateavg / RATEMAX_PERIOD;
+            if (rateavg > rateavg_prev)
+            {
+                rateavg_prev = rateavg;
+                // g_settings.ratemax_rate_lpm = rateavg / 1000;
+                // meterSafeWrite(&rateavg_prev, &rtc_ratemax, sizeof(float));
+            }
+            rateavg = 0;
+        }
+    }
+
     modbusFloatToRegister(rate, &inputRegisters[IREG_RATE]);
     modbusFloatToRegister(total, &inputRegisters[IREG_TOTAL]);
     modbusFloatToRegister(gtotal, &inputRegisters[IREG_GTOTAL]);
+    modbusFloatToRegister(rateMLPM, &inputRegisters[IREG_RATELPM]);
 
-    // modbusFloatToRegister(gtotal, &inputRegisters[IREG_GTOTAL]);
-    // modbusFloatToRegister(gtotal, &inputRegisters[IREG_GTOTAL]);
-    // modbusFloatToRegister(gtotal, &inputRegisters[IREG_GTOTAL]);
+    modbusLongToRegister(irate, &inputRegisters[IREG_IRATEML]);
+    modbusLongToRegister(itotalml, &inputRegisters[IREG_ITOTALML]);
+    modbusLongToRegister(igtotalml, &inputRegisters[IREG_IGTOTALML]);
 
     modbusFloatToRegister(last_freq_hz, &inputRegisters[IREG_FREQUENCY]);
     modbusLongToRegister(impulses, &inputRegisters[IREG_IMPULSES]);
@@ -238,9 +259,9 @@ void BoardTimer2Init(void)
     /* 4. Захват: CH1 — TI1 по фронту (CC1S=01, IC1F=0100 → N=8),
      *    CH2 — тот же TI1 по срезу (CC2S=10, IC2F=0100) */
     TIM2->CHCTLR1 = (uint16_t)(TIM_IC2F_1 | TIM_IC2F_2 /* IC2F=0100 */ |
-                                (TIM_CC2S_1)            /* CC2S=10, косвенно TI1 */ |
-                                TIM_IC1F_1 | TIM_IC1F_2 /* IC1F=0100 */ |
-                                TIM_CC1S_0);            /* CC1S=01, напрямую TI1 */
+                               (TIM_CC2S_1) /* CC2S=10, косвенно TI1 */ |
+                               TIM_IC1F_1 | TIM_IC1F_2 /* IC1F=0100 */ |
+                               TIM_CC1S_0); /* CC1S=01, напрямую TI1 */
     /* полярность: CC1E=1/CC1P=0 (фронт), CC2E=1/CC2P=1 (срез) */
     TIM2->CCER = (uint16_t)(TIM_CC1E | TIM_CC2E | TIM_CC2P);
 

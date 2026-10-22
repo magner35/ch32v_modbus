@@ -22,7 +22,7 @@ typedef struct
 void emaFilterInit(ema_filter_t *filter, uint16_t damping_time_seconds, bool adaptive);
 float emaFilterUpdate(ema_filter_t *filter, float instant_rate);
 
-void dampingFilterInit(damping_filter_t *filter, uint16_t damping_time);
+void dampingFilterInit(damping_filter_t *filter, float *buffer, uint8_t damping_time);
 float dampingFilterUpdate(damping_filter_t *filter, float instant_rate);
 
 /*----------------------------------------------------------------------------*/

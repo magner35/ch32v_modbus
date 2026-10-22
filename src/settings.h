@@ -203,7 +203,6 @@ extern const float pow60_tab[3];   /* time_base 0..2 = с/мин/ч */
 #define COEF_TOTAL() (pow1000_tab[g_settings.units_total])
 
 /* ── Индексы настроек: SET_<имя> ───────────────────────────────────────── */
-
 #define SETTINGS_INDEX(n, t, mn, mx, dv) SET_##n,
 enum
 {
@@ -212,7 +211,6 @@ enum
 };
 
 /* ── Рабочая копия значений (её образ уходит во flash) ─────────────────── */
-
 #define SETTINGS_FIELD(n, t, mn, mx, dv) ST_CTYPE_##t n;
 typedef struct
 {
@@ -220,7 +218,6 @@ typedef struct
 } settings_t;
 
 /* ── Значения + диапазоны для меню/HMI ─────────────────────────────────── */
-
 #define SET_FIELD(n, t, mn, mx, dv) ST_WRAPPER_##t n;
 typedef struct
 {
@@ -230,7 +227,6 @@ typedef struct
 /* ── Лимиты: min/max/def тем же типом, что и параметр ──────────────────── */
 /* ENUM хранит только число вариантов (мин всегда 0).
  * BOOL и FLOAT ограничений не имеют — только значение по умолчанию.       */
-
 typedef union
 {
     struct
@@ -282,7 +278,6 @@ typedef struct
 #define ST_DESC_FLOAT(n, mn, mx, dv) {ST_FLOAT, 2, {.f = {.def = (dv)}}},
 
 /* ── Образ страницы настроек во flash ──────────────────────────────────── */
-
 #define SETTINGS_MAGIC 0x4D534554UL /* "MSET" */
 #define SETTINGS_VERSION 1
 
@@ -296,7 +291,6 @@ typedef struct
 } settings_flash_t;
 
 /* ── Данные и API ──────────────────────────────────────────────────────── */
-
 extern settings_t g_settings;     /* рабочая копия */
 extern const set_t factory_meter; /* заводские значения + диапазоны */
 extern const setting_desc_t g_settings_desc[SETTINGS_COUNT];

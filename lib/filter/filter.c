@@ -48,15 +48,19 @@ float emaFilterUpdate(ema_filter_t *filter, float instant_rate)
 }
 /*----------------------------------------------------------------------------*/
 
-void dampingFilterInit(damping_filter_t *filter, uint16_t damping_time)
+void dampingFilterInit(damping_filter_t *filter, float *buffer, uint8_t damping_time)
 {
-    filter->size = damping_time;
-    filter->buffer = (float *)pvPortMalloc(damping_time * sizeof(float));
+    /* Буфер предоставляет вызывающий (без heap: pvPortMalloc из времён
+     * FreeRTOS убран). Время жизни буфера должно перекрывать жизнь фильтра.
+     * damping_time == 0 или buffer == NULL — фильтр выключен (update
+     * возвращает вход без изменений). */
+    filter->buffer = buffer;
+    filter->size = (buffer != NULL) ? damping_time : 0;
     filter->index = 0;
     filter->sum = 0.0f;
     filter->is_reset = true;
-    // Инициализация буфера нулями
-    for (int i = 0; i < damping_time; i++)
+
+    for (uint8_t i = 0; i < filter->size; i++)
     {
         filter->buffer[i] = 0.0f;
     }
@@ -73,12 +77,11 @@ float dampingFilterUpdate(damping_filter_t *filter, float instant_rate)
     // Если фильтр в режиме сброса, заполняем буфер текущим значением
     if (filter->is_reset)
     {
-        for (int i = 0; i < filter->size; i++)
+        for (uint8_t i = 0; i < filter->size; i++)
         {
-            filter->sum -= filter->buffer[i];
             filter->buffer[i] = instant_rate;
-            filter->sum += instant_rate;
         }
+        filter->sum = instant_rate * filter->size; /* эквивалент по-элементного суммирования */
         filter->is_reset = false;
         filter->index = 0;
         return instant_rate;
