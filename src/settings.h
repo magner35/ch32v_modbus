@@ -152,7 +152,7 @@ enum
     X(interfaceRS485_parity, ENUM, -, 3, PARITY_NONE)    /* 0 - none, 1 - even, 2 - odd */            \
     X(interfaceRS485_stopbits, BOOL, -, -, 0)            /* 0 - 1 стоп-бит, 1 - 2 */                  \
     X(interfaceRS485_delay, U8, 0, 255, 5)               /* задержка ответа, мс */                    \
-    X(interfaceRS485_mode, ENUM, -, 2, IMODE_RS485)      /* альтернативная фунция (TODO) */           \
+    X(interfaceRS485_mode, ENUM, -, 4, IMODE_RS485)      /* альтернативная фунция (TODO) */           \
     X(aout_calibration_low, FLOAT, -, -, 0.0f)           /* нижнее клибровочное значение АВ */        \
     X(aout_calibration_high, FLOAT, -, -, 0.0f)          /* верхнее калибровочное значение АВ */
 

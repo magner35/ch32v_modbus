@@ -46,6 +46,8 @@ enum
 {
     HREG_CONTROL,                                    // format:U, type:u16
     HREG_PASSWORD,                                   // format:U, type:u16
+    HREG_DAMPING,                                    // format:U, type:bit /*  */
+    HREG_SENSOR,                                     // format:U, type:bit /*  */
     HREG_interfaceRS485_configuration,               // format:U, type:bit /* RS-485 configuration bits: delay - 15:8, function - 7:6 ,stopbits - 5, parity - 4, baud - 3:0 (0 - 1200, 1 - 2400, 2 - 4800, 3 - 9600, 4 - 14400, 5 - 19200, 6 - 28800, 7 - 38400, 8 - 57600, 9 - 115200) */
     HREG_interfaceRS485_slave_address,               // format:U, type:u8
     HREG_aout_calibration_low,                       // format:F, type:f32
@@ -82,11 +84,11 @@ enum
 enum
 {
     EMPTY,
-    HCTRL_SYSTEM_WRITE,     // password SYSTEM
-    HCTRL_METER_WRITE,      // password METER
-    HCTRL_SERVICE_RESET,    // password SERVICE
-    HCTRL_ALL_READ,         // read back
-    HCTRL_DEFAULT,          // password SYSTEM - возврат заводских настроек
+    HCTRL_SYSTEM_WRITE,  // password SYSTEM
+    HCTRL_METER_WRITE,   // password METER
+    HCTRL_SERVICE_RESET, // password SERVICE
+    HCTRL_ALL_READ,      // read back
+    HCTRL_DEFAULT,       // password SYSTEM - возврат заводских настроек
 };
 /*----------------------------------------------------------------------------*/
 
