@@ -17,7 +17,7 @@
 #include "powermon.h"
 
 /* ── Тайминги ── */
-#define TIM_CLK_HZ 48000000UL
+#define TIM_CLK_HZ 48650000UL // ajust for HSI
 #define TIM_PRESCALER 1 /* PSC=0 → 48 МГц */
 #define TIM_TICK_HZ (TIM_CLK_HZ / TIM_PRESCALER)
 
@@ -216,21 +216,22 @@ void timer_10ms_callback(void)
  * необходимости: заменить имя обратно и удалить регистровую версию. */
 void BoardTimer2Init_SPL(void)
 {
-    // Инициализация TIM2 Input Capture
+    // Инициализация TIM2 Input Capture (вход PC1, полный ремап TIM2)
     GPIO_InitTypeDef GPIO_InitStruct = {0};
     TIM_TimeBaseInitTypeDef TIM_TimeBaseStruct = {0};
     TIM_ICInitTypeDef TIM_ICStruct = {0};
     NVIC_InitTypeDef NVIC_InitStruct = {0};
 
-    /* 1. Тактирование GPIOA/GPIOD и TIM2 */
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOD, ENABLE);
+    /* 1. Тактирование GPIOC/AFIO и TIM2 */
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC | RCC_APB2Periph_AFIO, ENABLE);
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
 
-    /* 2. PD4 → Floating Input (TIM2_CH1 / TI1) */
-    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_4;
+    /* 2. PC1 → вход с подтяжкой (TIM2_CH1/TI1 при полном ремапе) */
+    GPIO_PinRemapConfig(GPIO_FullRemap_TIM2, ENABLE);
+    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_1;
     GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IPU;
     GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
-    GPIO_Init(GPIOD, &GPIO_InitStruct);
+    GPIO_Init(GPIOC, &GPIO_InitStruct);
 
     /* 3. TimeBase: PSC=0 → 48 МГц, ARR=0xFFFF */
     TIM_TimeBaseStruct.TIM_Period = 0xFFFF;
@@ -273,16 +274,23 @@ void BoardTimer2Init_SPL(void)
 /* Инициализация TIM2 Input Capture — прямые записи в регистры.
  * Эквивалент BoardTimer2Init_SPL. Экономит ~390 Б flash (TIM_ICInit,
  * TIM_SetICxPrescaler, GPIO_Init, TIM_TimeBaseInit, TIM_Cmd/ITConfig,
- * RCC_APBxPeriphClockCmd). */
+ * RCC_APBxPeriphClockCmd).
+ * Вход импульсов — PC1 (TI1 при полном ремапе TIM2_RM=11): у этой партии
+ * плат вывод PD4 физически недоступен. Кросс-захват не меняется: CH2 в
+ * косвенном режиме берёт TI1 внутренне; задействованные каналы — только
+ * CH1/CH2 (CH3/CH4 при полном ремапе уходят на PD6/PD5 — не включены,
+ * с UART не конфликтуют). */
 void BoardTimer2Init(void)
 {
-    /* 1. Тактирование TIM2 (APB1) и GPIOD (APB2) */
+    /* 1. Тактирование TIM2 (APB1), GPIOC (APB2) и AFIO (ремап) */
     RCC->APB1PCENR |= RCC_APB1Periph_TIM2;
-    RCC->APB2PCENR |= RCC_APB2Periph_GPIOD;
+    RCC->APB2PCENR |= RCC_APB2Periph_GPIOC | RCC_APB2Periph_AFIO;
 
-    /* 2. PD4 → вход с подтяжкой вверх: CNF=10, MODE=00, ODR=1 */
-    GPIOD->CFGLR = (GPIOD->CFGLR & ~((uint32_t)0xFu << 16)) | (0x8u << 16);
-    GPIOD->OUTDR |= GPIO_Pin_4;
+    /* 2. PC1 → вход с подтяжкой вверх: CNF=10, MODE=00, ODR=1 */
+    GPIOC->CFGLR = (GPIOC->CFGLR & ~((uint32_t)0xFu << 4)) | (0x8u << 4);
+    GPIOC->OUTDR |= GPIO_Pin_1;
+    /* Полный ремап TIM2: биты TIM2_RM[9:8] = 11 → TI1 приходит с PC1 */
+    AFIO->PCFR1 = (AFIO->PCFR1 & ~((uint32_t)0x3u << 8)) | (0x3u << 8);
 
     /* 3. TimeBase: PSC=0 (48 МГц), ARR=0xFFFF, счёт вверх */
     TIM2->PSC = TIM_PRESCALER - 1;
