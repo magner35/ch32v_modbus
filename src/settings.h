@@ -120,30 +120,30 @@ enum
     X(multiplier_parameter, BOOL, -, -, 0, HREG_multiplier_parameter, SETGRP_METER)                  /* 0 - K-фактор, 1 - цена импульса */                                 \
     X(multiplier_units, ENUM, -, 3, UNITS_ML, HREG_multiplier_units, SETGRP_METER)                   /* 0 - миллилитр, 1 - литр, 2 - метр куб. */                          \
     X(meter_correction, FLOAT, -, -, 1.0f, HREG_meter_correction, SETGRP_METER)                      /* поправочный коэффициент */                                         \
-    X(serial_number, U32, 0, 999999, 123456, HREG_serial_number, SETGRP_METER)                       /* серийный номер прибора */                                          \
-    X(units_time_base, ENUM, -, 3, TBASE_MIN, HREG_units_time_base, SETGRP_METER)                    /* 0 - сек, 1 - мин, 2 - час (TODO) */                                \
-    X(units_rate, ENUM, -, 3, UNITS_L, HREG_units_rate, SETGRP_METER)                                /* 0 - миллилитр, 1 - литр, 2 - метр куб. */                          \
-    X(units_total, ENUM, -, 3, UNITS_L, HREG_units_total, SETGRP_METER)                              /* 0 - миллилитр, 1 - литр, 2 - метр куб. */                          \
-    X(aout_parameter, ENUM, -, 3, AOUT_RATE, HREG_aout_parameter, SETGRP_METER)                      /* переменная для аналогового выхода */                               \
-    X(aout_treshold_4ma, FLOAT, -, -, 0.0f, HREG_aout_treshold_4ma, SETGRP_METER)                    /* нижний порог */                                                    \
-    X(aout_treshold_20ma, FLOAT, -, -, 0.0f, HREG_aout_treshold_20ma, SETGRP_METER)                  /* верхний порог */                                                   \
-    X(aout_calibration_low, FLOAT, -, -, 0.0f, HREG_aout_calibration_low, SETGRP_SYSTEM)             /* нижнее клибровочное значение АВ */                                 \
-    X(aout_calibration_high, FLOAT, -, -, 0.0f, HREG_aout_calibration_high, SETGRP_SYSTEM)           /* верхнее калибровочное значение АВ */                               \
-    X(rate_damping, U8, 0, 99, 0, HREG_rate_damping, SETGRP_METER)                                   /* сек демпфирования*/                                                \
-    X(rate_averaging, U8, 1, 255, 1, HREG_rate_averaging, SETGRP_METER)                              /* количество импульсов для усреднения */                             \
-    X(input_sens, ENUM, -, 4, ILEVEL_40, HREG_input_sens, SETGRP_METER)                              /* чувствительность по входу */                                       \
-    X(sensor_filter_freq_high, U16, 0, 9999, 6000, HREG_sensor_filter_freq_high, SETGRP_METER)       /* ФВЧ Гц */                                                          \
-    X(sensor_filter_freq_low, U16, 0, 9999, 1, HREG_sensor_filter_freq_low, SETGRP_METER)            /* ФНЧ Гц */                                                          \
-    X(sensor_filter_duty, U8, 0, 100, 25, HREG_sensor_filter_duty, SETGRP_METER)                     /* Q коэф.заполнения % */                                             \
+    X(serial_number, U32, 0, 999999, 123456, HREG_serial_number, SETGRP_SERVICE)                     /* серийный номер прибора */                                          \
+    X(units_time_base, ENUM, -, 3, TBASE_MIN, HREG_units_time_base, SETGRP_SYSTEM)                   /* 0 - сек, 1 - мин, 2 - час (TODO) */                                \
+    X(units_rate, ENUM, -, 3, UNITS_L, HREG_units_rate, SETGRP_SYSTEM)                               /* 0 - миллилитр, 1 - литр, 2 - метр куб. */                          \
+    X(units_total, ENUM, -, 3, UNITS_L, HREG_units_total, SETGRP_SYSTEM)                             /* 0 - миллилитр, 1 - литр, 2 - метр куб. */                          \
+    X(aout_parameter, ENUM, -, 3, AOUT_RATE, HREG_aout_parameter, SETGRP_SYSTEM)                     /* переменная для аналогового выхода */                               \
+    X(aout_treshold_4ma, FLOAT, -, -, 0.0f, HREG_aout_treshold_4ma, SETGRP_SYSTEM)                   /* нижний порог */                                                    \
+    X(aout_treshold_20ma, FLOAT, -, -, 0.0f, HREG_aout_treshold_20ma, SETGRP_SYSTEM)                 /* верхний порог */                                                   \
+    X(aout_calibration_low, FLOAT, -, -, 0.0f, HREG_aout_calibration_low, SETGRP_SERVICE)            /* нижнее клибровочное значение АВ */                                 \
+    X(aout_calibration_high, FLOAT, -, -, 0.0f, HREG_aout_calibration_high, SETGRP_SERVICE)          /* верхнее калибровочное значение АВ */                               \
+    X(rate_damping, U8, 0, 99, 0, HREG_rate_damping, SETGRP_SYSTEM)                                  /* сек демпфирования*/                                                \
+    X(rate_averaging, U8, 1, 255, 1, HREG_rate_averaging, SETGRP_SYSTEM)                             /* количество импульсов для усреднения */                             \
+    X(input_sens, ENUM, -, 4, ILEVEL_40, HREG_input_sens, SETGRP_SYSTEM)                             /* чувствительность по входу */                                       \
+    X(sensor_filter_freq_high, U16, 0, 9999, 6000, HREG_sensor_filter_freq_high, SETGRP_SYSTEM)      /* ФВЧ Гц */                                                          \
+    X(sensor_filter_freq_low, U16, 0, 9999, 1, HREG_sensor_filter_freq_low, SETGRP_SYSTEM)           /* ФНЧ Гц */                                                          \
+    X(sensor_filter_duty, U8, 0, 100, 25, HREG_sensor_filter_duty, SETGRP_SYSTEM)                    /* Q коэф.заполнения % */                                             \
     X(interfaceRS485_slave_address, U8, 1, 247, 1, HREG_interfaceRS485_slave_address, SETGRP_SYSTEM) /* адрес устройства modbus */                                         \
     X(interfaceRS485_baudrate, ENUM, -, 10, BAUD_9600, HREG_interfaceRS485_baudrate, SETGRP_SYSTEM)  /* rs-485 baudrate */                                                 \
     X(interfaceRS485_parity, ENUM, -, 3, PARITY_NONE, HREG_interfaceRS485_parity, SETGRP_SYSTEM)     /* 0 - none, 1 - even, 2 - odd */                                     \
     X(interfaceRS485_stopbits, BOOL, -, -, 0, HREG_interfaceRS485_stopbits, SETGRP_SYSTEM)           /* 0 - 1 стоп-бит, 1 - 2 */                                           \
     X(interfaceRS485_delay, U8, 0, 255, 5, HREG_interfaceRS485_delay, SETGRP_SYSTEM)                 /* задержка ответа, мс */                                             \
     X(interfaceRS485_mode, ENUM, -, 3, IMODE_RS485, HREG_interfaceRS485_mode, SETGRP_SYSTEM)         /* 0 - RS-485, 1 - нормируемый импульс, 2 - расход вне диапазона,  */ \
-    X(setpoint_qmax, FLOAT, -, -, 0.0f, HREG_setpoint_qmax, SETGRP_METER)                            /* уставка Qmax  */                                                   \
-    X(setpoint_qmin, FLOAT, -, -, 0.0f, HREG_setpoint_qmin, SETGRP_METER)                            /* уставка Qmin  */                                                   \
-    X(scaled_pulse, FLOAT, -, -, 0.0f, HREG_scaled_pulse, SETGRP_METER)                              /* Цена нормируемого импульса  */
+    X(setpoint_qmax, FLOAT, -, -, 0.0f, HREG_setpoint_qmax, SETGRP_SYSTEM)                           /* уставка Qmax  */                                                   \
+    X(setpoint_qmin, FLOAT, -, -, 0.0f, HREG_setpoint_qmin, SETGRP_SYSTEM)                           /* уставка Qmin  */                                                   \
+    X(scaled_pulse, FLOAT, -, -, 0.0f, HREG_scaled_pulse, SETGRP_SYSTEM)                             /* Цена нормируемого импульса  */
 
 /* ── Отображения «символьный тип → C-тип / обёртка / инициализатор» ────── */
 
@@ -262,6 +262,7 @@ typedef struct
 /* группы доступа: какие настройки принимает HCTRL_SYSTEM_WRITE / HCTRL_METER_WRITE */
 #define SETGRP_SYSTEM 0
 #define SETGRP_METER 1
+#define SETGRP_SERVICE 2
 
 /* Построение строки дескриптора по типу (words: 1 или 2 регистра Modbus) */
 #define ST_DESC_BOOL(n, mn, mx, dv, rg, gr) {ST_BOOL, 1, rg, gr, {.b = {.def = (dv)}}},
