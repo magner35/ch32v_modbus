@@ -5,6 +5,7 @@
  */
 
 #include "settings.h"
+#include "modbus_registers.h"
 #include <stddef.h>
 #include "filter.h"
 
@@ -28,14 +29,14 @@ settings_t g_settings;
 
 ema_filter_t ema_rate_filter;
 
-#define DESC_ROW(n, t, mn, mx, dv) ST_DESC_##t(n, mn, mx, dv)
+#define DESC_ROW(n, t, mn, mx, dv, rg, gr) ST_DESC_##t(n, mn, mx, dv, rg, gr)
 const setting_desc_t g_settings_desc[SETTINGS_COUNT] =
     {
         SETTINGS_TABLE(DESC_ROW)
 
 };
 
-#define OFFS_ROW(n, t, mn, mx, dv) offsetof(settings_t, n),
+#define OFFS_ROW(n, t, mn, mx, dv, rg, gr) offsetof(settings_t, n),
 const uint16_t g_settings_offs[SETTINGS_COUNT] =
     {
         SETTINGS_TABLE(OFFS_ROW)
@@ -198,7 +199,9 @@ uint8_t settingsLpoints(void)
     }
 
     /* 3. Линеаризация требует минимум две точки, иначе — выключена */
-    lpoints_count = (n >= 2) ? n : 0;
+    /* одна заполненная точка — валидный режим: константный коэффициент
+     * (см. meter.c); сплайн — от двух точек */
+    lpoints_count = (n >= 1) ? n : 0;
     return lpoints_count;
 }
 

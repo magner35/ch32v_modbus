@@ -8,7 +8,7 @@
 
 /* Заводские значения и диапазоны собираются из SETTINGS_TABLE:
  * value ← колонка «дефолт», range ← колонка «макс» */
-#define FACTORY_ROW(n, t, mn, mx, def) ST_INIT_##t(n, mn, mx, def)
+#define FACTORY_ROW(n, t, mn, mx, def, rg, gr) ST_INIT_##t(n, mn, mx, def, rg, gr)
 
 const set_t factory_meter =
     {

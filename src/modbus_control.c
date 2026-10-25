@@ -24,8 +24,6 @@ enum
 };
 static const uint16_t menu_pass[MENUPASS_COUNT] = {1000, 2000, 3000};
 
-/* Бит ошибки доступа в IREG_STATUS; снимается автоматически через таймаут */
-#define FSTATUS_ACCESERROR 0
 #define ACCES_ERROR_TIMEOUT_MS 10000u
 
 /* Примечание об атомарности: в отличие от проекта-донора (FreeRTOS, задачи),
@@ -41,37 +39,65 @@ static void accessError(uint16_t *status, uint32_t *deadline)
 }
 
 /*----------------------------------------------------------------------------*/
-
-/* Выгрузка настроек в holding-регистры (команда HCTRL_ALL_READ).
- * Битовые поля собираются по карте modbus_registers.h */
+/* Перенос настроек ↔ holding-регистры циклом по дескрипторам:
+ * соответствие «настройка ↔ регистр ↔ группа пароля» живёт только
+ * в SETTINGS_TABLE (колонки HREG_/SETGRP_), ручной синхронизации нет */
 static void settingsToRegisters(void)
 {
-    uint16_t rs = 0;
-    rs |= (uint16_t)(g_settings.interfaceRS485_baudrate & 0xF); /* биты 3:0 */
-    rs |= (uint16_t)((g_settings.interfaceRS485_parity & 0x3) << 4);
-    rs |= (uint16_t)((g_settings.interfaceRS485_stopbits & 0x1) << 5);
-    rs |= (uint16_t)((g_settings.interfaceRS485_mode & 0x3) << 6);
-    rs |= (uint16_t)((g_settings.interfaceRS485_delay & 0xFF) << 8);
-    holdingRegisters[HREG_interfaceRS485_configuration] = rs;
-    holdingRegisters[HREG_interfaceRS485_slave_address] = g_settings.interfaceRS485_slave_address;
-
-    modbusFloatToRegister(g_settings.aout_calibration_low, &holdingRegisters[HREG_aout_calibration_low]);
-    modbusFloatToRegister(g_settings.aout_calibration_high, &holdingRegisters[HREG_aout_calibration_high]);
-    modbusLongToRegister(g_settings.serial_number, &holdingRegisters[HREG_serial_number]);
-
-    uint16_t mc = 0;
-    mc |= (uint16_t)(g_settings.multiplier_units & 0x3); /* биты 1:0 */
-    mc |= (uint16_t)((g_settings.multiplier_parameter & 0x1) << 2);
-    mc |= (uint16_t)((g_settings.linearisation & 0x1) << 3);
-    holdingRegisters[HREG_multiplier_configuration] = mc;
-    modbusFloatToRegister(g_settings.multiplier_value_average, &holdingRegisters[HREG_multiplier_value]);
-    modbusFloatToRegister(g_settings.meter_correction, &holdingRegisters[HREG_correction]);
-
-    /* таблицы линеаризации — читаются общим потоком */
+    for (uint8_t i = 0; i < SETTINGS_COUNT; i++)
+    {
+        const setting_desc_t *d = &g_settings_desc[i];
+        uint16_t *reg = &holdingRegisters[d->hreg];
+        void *field = (uint8_t *)&g_settings + g_settings_offs[i];
+        switch ((setting_type_t)d->type)
+        {
+        case ST_FLOAT:
+            modbusFloatToRegister(*(float *)field, reg);
+            break;
+        case ST_U32:
+            modbusLongToRegister(*(uint32_t *)field, reg);
+            break;
+        case ST_U16:
+            *reg = *(uint16_t *)field;
+            break;
+        default: /* BOOL/ENUM/U8/I8 — однобайтовые */
+            *reg = *(uint8_t *)field;
+            break;
+        }
+    }
+    /* таблицы линеаризации — тем же потоком чтения */
     floatToRegCopy(lpoint_forward_frequency, &holdingRegisters[HREG_LPF1], LPOINTS);
     floatToRegCopy(lpoint_forward_value, &holdingRegisters[HREG_LPV1], LPOINTS);
+}
 
-    /* HREG_setpoint_qmax/qmin: полей в SETTINGS_TABLE пока нет — TODO */
+/* Holding → настройки для группы group (валидация в settings_set).
+ * Возвращает false, если хоть одно значение отброшено по диапазону */
+static bool registersToSettings(uint8_t group)
+{
+    bool ok = true;
+    for (uint8_t i = 0; i < SETTINGS_COUNT; i++)
+    {
+        const setting_desc_t *d = &g_settings_desc[i];
+        if (d->group != group)
+            continue;
+        uint16_t *reg = &holdingRegisters[d->hreg];
+        float val;
+        switch ((setting_type_t)d->type)
+        {
+        case ST_FLOAT:
+            val = modbusRegisterToFloat(reg);
+            break;
+        case ST_U32:
+            val = (float)modbusRegisterToLong(reg);
+            break;
+        default:
+            val = *reg;
+            break;
+        }
+        if (!settings_set(i, val))
+            ok = false;
+    }
+    return ok;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -103,15 +129,7 @@ void modbusControl(void)
         {
             if (password == menu_pass[MENUPASS_SYSTEM])
             {
-                uint16_t rs = holdingRegisters[HREG_interfaceRS485_configuration];
-                settings_set(SET_interfaceRS485_baudrate, (float)(rs & 0xF));
-                settings_set(SET_interfaceRS485_parity, (float)((rs >> 4) & 0x3));
-                settings_set(SET_interfaceRS485_stopbits, (float)((rs >> 5) & 0x1));
-                settings_set(SET_interfaceRS485_mode, (float)((rs >> 6) & 0x3));
-                settings_set(SET_interfaceRS485_delay, (float)((rs >> 8) & 0xFF));
-                settings_set(SET_interfaceRS485_slave_address, (float)holdingRegisters[HREG_interfaceRS485_slave_address]);
-                settings_set(SET_aout_calibration_low, modbusRegisterToFloat(&holdingRegisters[HREG_aout_calibration_low]));
-                settings_set(SET_aout_calibration_high, modbusRegisterToFloat(&holdingRegisters[HREG_aout_calibration_high]));
+                registersToSettings(SETGRP_SYSTEM); /* RS-485 + калибровка АВ */
                 /* TODO: settings_save_flash(); параметры RS-485 применяются
                  * после перезагрузки (InitModbus читает g_settings) */
                 control = HCTRL_ALL_READ;
@@ -125,17 +143,47 @@ void modbusControl(void)
         {
             if (password == menu_pass[MENUPASS_METER])
             {
-                settings_set(SET_serial_number, (float)modbusRegisterToLong(&holdingRegisters[HREG_serial_number]));
-                uint16_t mc = holdingRegisters[HREG_multiplier_configuration];
-                settings_set(SET_multiplier_units, (float)(mc & 0x3));
-                settings_set(SET_multiplier_parameter, (float)((mc >> 2) & 0x1));
-                settings_set(SET_linearisation, (float)((mc >> 3) & 0x1));
-                settings_set(SET_multiplier_value_average, modbusRegisterToFloat(&holdingRegisters[HREG_multiplier_value]));
-                settings_set(SET_meter_correction, modbusRegisterToFloat(&holdingRegisters[HREG_correction]));
+                registersToSettings(SETGRP_METER);
                 regToFloatCopy(&holdingRegisters[HREG_LPF1], lpoint_forward_frequency, LPOINTS);
                 regToFloatCopy(&holdingRegisters[HREG_LPV1], lpoint_forward_value, LPOINTS);
                 settingsLpoints(); /* пересчитать lpoints_count и нормализовать */
                 control = HCTRL_ALL_READ;
+            }
+            else
+                accessError(&status, &acces_deadline);
+        }
+        /* сброс рабочего счётчика объёма (общий и импульсы не трогаем) */
+        else if (control == HCTRL_TOTAL_RESET)
+        {
+            if (password == menu_pass[MENUPASS_SYSTEM])
+            {
+                totalnl = 0;
+                critical_payload_t cp = {
+                    .totalnl = 0,
+                    .gtotalnl = gtotalnl,
+                    .runtime_device = runtime_device,
+                    .runtime_flowmeter = runtime_flowmeter,
+                    .impulses = impulses,
+                    .poweron_counter = poweron_counter};
+                critical_save(&cp, false); /* зафиксировать сброс сразу */
+            }
+            else
+                accessError(&status, &acces_deadline);
+        }
+        /* сброс общего накопленного объёма (рабочий и импульсы не трогаем) */
+        else if (control == HCTRL_GTOTAL_RESET)
+        {
+            if (password == menu_pass[MENUPASS_SYSTEM])
+            {
+                gtotalnl = 0;
+                critical_payload_t cp = {
+                    .totalnl = 0,
+                    .gtotalnl = 0,
+                    .runtime_device = runtime_device,
+                    .runtime_flowmeter = runtime_flowmeter,
+                    .impulses = impulses,
+                    .poweron_counter = poweron_counter};
+                critical_save(&cp, false); /* зафиксировать сброс сразу */
             }
             else
                 accessError(&status, &acces_deadline);
@@ -164,9 +212,9 @@ void modbusControl(void)
          * для этого HCTRL_SERVICE_RESET) */
         else if (control == HCTRL_DEFAULT)
         {
-            if (password == menu_pass[MENUPASS_SYSTEM])
+            if (password == menu_pass[MENUPASS_SERVICE])
             {
-                settings_load_factory(); /* значения из дескрипторов */
+                settings_load_factory();              /* значения из дескрипторов */
                 for (uint8_t i = 0; i < LPOINTS; i++) /* таблицы линеаризации */
                 {
                     lpoint_forward_frequency[i] = factory_lpoint_forward_frequency[i];
