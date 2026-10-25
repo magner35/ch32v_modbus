@@ -18,12 +18,12 @@
 
 /* ── Тайминги ── */
 #define TIM_CLK_HZ 48650000UL // ajust for HSI
-#define TIM_PRESCALER 1 /* PSC=0 → 48 МГц */
+#define TIM_PRESCALER 1       /* PSC=0 → 48 МГц */
 #define TIM_TICK_HZ (TIM_CLK_HZ / TIM_PRESCALER)
 
 /* ── Пороги фильтрации (целочисленные, без float!) ── */
 #define FREQ_MIN_HZ 1UL
-#define FREQ_MAX_HZ 4500UL
+#define FREQ_MAX_HZ 5500UL
 /* duty ∈ [0.10 ; 0.90]  ⇔  pulse*10 ∈ [period ; period*9] */
 #define DUTY_NUM_MIN 1UL
 #define DUTY_NUM_MAX 9UL
@@ -108,12 +108,20 @@ void timer_100ms_callback(void)
     }
 
     // GPIO_SetBits(LED2_GPIO_PORT, LED2_GPIO_PIN);
-    if (g_settings.linearisation)
+    if (lpoints_count >= 2)
     {
-        kf_value = interpolationConstrainedSpline(lpoint_forward_frequency, lpoint_forward_value, lpoints_count, frequency, 1); // 690 us
+        kf_value = g_settings.meter_correction * interpolationConstrainedSpline(lpoint_forward_frequency, lpoint_forward_value, lpoints_count, frequency, 1); // 690 us
+    }
+    else if (lpoints_count == 1)
+    {
+        /* единственная заполненная точка — линеаризация не применяется,
+         * её значение работает как постоянный коэффициент (быв. meter_value) */
+        kf_value = lpoint_forward_value[0] * g_settings.meter_correction;
     }
     else
-        kf_value = g_settings.multiplier_value_average;
+    {
+        kf_value = g_settings.meter_correction; /* таблица пуста */
+    }
     // GPIO_ResetBits(LED2_GPIO_PORT, LED2_GPIO_PIN);
 
     // rate calculation
