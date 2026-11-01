@@ -188,7 +188,7 @@ void modbusControl(void)
             else
                 accessError(&status, &acces_deadline);
         }
-        /* сервисный сброс: обнуление накопителей объёма и импульсов */
+        /* сервисный сброс: обнуление накопителей объёма, импульсов и таймеров */
         else if (control == HCTRL_SERVICE_RESET)
         {
             if (password == menu_pass[MENUPASS_SERVICE])
@@ -196,13 +196,16 @@ void modbusControl(void)
                 totalnl = 0;
                 gtotalnl = 0;
                 impulses = 0;
+                runtime_device = 0;
+                runtime_flowmeter = 0;
+                poweron_counter = 0;
                 critical_payload_t cp = {
                     .totalnl = 0,
                     .gtotalnl = 0,
-                    .runtime_device = runtime_device,
-                    .runtime_flowmeter = runtime_flowmeter,
+                    .runtime_device = 0,
+                    .runtime_flowmeter = 0,
                     .impulses = 0,
-                    .poweron_counter = poweron_counter};
+                    .poweron_counter = 0};
                 critical_save(&cp, false); /* зафиксировать сброс сразу */
             }
             else

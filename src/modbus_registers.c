@@ -34,6 +34,16 @@ void modbusFloatToRegister(float src, uint16_t *dst)
 }
 
 /*----------------------------------------------------------------------------*/
+// Запись uint64_t в четыре регистра (старшее слово — в первый, ABCD)
+void modbusLongLongToRegister(uint64_t src, uint16_t *dst)
+{
+    dst[0] = (uint16_t)(src >> 48);
+    dst[1] = (uint16_t)(src >> 32);
+    dst[2] = (uint16_t)(src >> 16);
+    dst[3] = (uint16_t)(src);
+}
+
+/*----------------------------------------------------------------------------*/
 // Чтение float из двух регистров (универсально)
 float modbusRegisterToFloat(uint16_t *src)
 {
@@ -46,17 +56,15 @@ float modbusRegisterToFloat(uint16_t *src)
 
 /*----------------------------------------------------------------------------*/
 // Массовое копирование массива float в регистры.
-// Порядок слов — как у modbusFloatToRegister: [0] младшее, [1] старшее
-// (в проекте-доноре было наоборот — обратный порядок против остальных
-// float-регистров)
+// Порядок слов — как у modbusFloatToRegister: [0] старшее, [1] младшее (ABCD)
 void floatToRegCopy(float source[], uint16_t dest[], uint8_t count)
 {
     uint32_t temp;
     for (uint8_t i = 0; i < count; i++)
     {
         memcpy(&temp, &source[i], sizeof(float));
-        dest[i * 2] = temp & 0xFFFF;
-        dest[i * 2 + 1] = (temp >> 16) & 0xFFFF;
+        dest[i * 2] = (temp >> 16) & 0xFFFF;
+        dest[i * 2 + 1] = temp & 0xFFFF;
     }
 }
 
@@ -67,7 +75,7 @@ void regToFloatCopy(uint16_t dest[], float source[], uint8_t count)
     uint32_t temp;
     for (uint8_t i = 0; i < count; i++)
     {
-        temp = ((uint32_t)dest[i * 2 + 1] << 16) | (dest[i * 2] & 0xFFFF);
+        temp = ((uint32_t)dest[i * 2] << 16) | (dest[i * 2 + 1] & 0xFFFF);
         memcpy(&source[i], &temp, sizeof(float));
     }
 }

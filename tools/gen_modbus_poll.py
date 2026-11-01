@@ -48,7 +48,8 @@ if _p is not None:
 
 HEADER_SIZE = 572
 ROW_BODY = bytes.fromhex("000000ff") * 6 + b"\x00" * 24  # тело строки из шаблона
-TWO_WORD_TYPES = {"FLOAT", "UL", "TIME", "U32"}
+TWO_WORD_TYPES = {"FLOAT", "UL", "TIME", "U32", "U64"}
+WORD_COUNTS = {"U64": 4}  # остальные двухсловные — по 2
 ROW_CAPACITY = 300  # ёмкость хвоста шаблона (проверено на исходнике)
 
 
@@ -69,7 +70,10 @@ def parse_ireg_enum(path):
         if not (m_prev or m_plain):
             continue
         mtype = re.search(r"type:\s*(\w+)", line)
-        two_word = bool(mtype) and mtype.group(1) in TWO_WORD_TYPES
+        words = 0
+        if mtype:
+            t = mtype.group(1).upper()
+            words = WORD_COUNTS.get(t, 2 if t in TWO_WORD_TYPES else 1)
         if m_prev:
             name = m_prev.group(1)
             if "LASTREGISTER" in name:
@@ -84,7 +88,7 @@ def parse_ireg_enum(path):
                 break
             value_slot = counter
             counter += 1
-        members.append((name, value_slot, two_word))
+        members.append((name, value_slot, words))
     return members, counter  # counter == IREG_LASTREGISTER
 
 
@@ -93,13 +97,13 @@ def row_names(members, total_slots):
     Имя = идентификатор enum без префикса IREG_, в исходном регистре
     (IREG_ESTATUS → ESTATUS)."""
     names = {}
-    for name, slot, two_word in members:
+    for name, slot, words in members:
         base = name[len("IREG_"):]
         if slot in names:
             print("gen_mbp: ВНИМАНИЕ, коллизия слота %d (%s / %s) — "
                   "карта регистров кривая, см. PREV_LONG_MEMBER"
                   % (slot, names[slot][0], base), file=sys.stderr)
-        names[slot] = (base, two_word)
+        names[slot] = (base, words)
     rows = []
     for slot in range(total_slots):
         rows.append(names[slot][0] if slot in names else "")

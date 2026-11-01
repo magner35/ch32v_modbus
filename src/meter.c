@@ -49,7 +49,7 @@ uint32_t runtime_flowmeter;
  * импульсов: восстановление из flash при старте, сохранение при аварии */
 uint64_t totalnl = 0;
 uint64_t gtotalnl = 0;
-uint32_t impulses = 0;
+uint64_t impulses = 0;
 
 /* Счётчик включений: +1 после 10 с устойчивой работы каждой сессии,
  * восстанавливается из flash */
@@ -195,7 +195,7 @@ void timer_100ms_callback(void)
     modbusLongToRegister(igtotalml, &inputRegisters[IREG_IGTOTALML]);
 
     modbusFloatToRegister(frequency, &inputRegisters[IREG_FREQUENCY]);
-    modbusLongToRegister(impulses, &inputRegisters[IREG_IMPULSES]);
+    modbusLongLongToRegister(impulses, &inputRegisters[IREG_IMPULSES]);
     modbusLongToRegister(runtime_device, &inputRegisters[IREG_RUNTIME_DEVICE]);
     modbusLongToRegister(runtime_flowmeter, &inputRegisters[IREG_RUNTIME_FLOWMETER]);
 

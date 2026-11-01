@@ -1,6 +1,7 @@
 #include "Modbus.h"
 #include "debug.h"
 #include "ModbusPort.h"
+#include "version.h"
 
 /*******************************ModBus Functions*******************************/
 #define MODBUS_READ_COILS 1
@@ -11,6 +12,7 @@
 #define MODBUS_WRITE_SINGLE_REGISTER 6
 #define MODBUS_WRITE_MULTIPLE_COILS 15
 #define MODBUS_WRITE_MULTIPLE_REGISTERS 16
+#define MODBUS_REPORT_SLAVE_ID 0x11
 /****************************End of ModBus Functions***************************/
 
 #define FALSE_FUNCTION 0
@@ -194,6 +196,43 @@ static void HandleModbusWriteRegisters(unsigned char Function)
 }
 /******************************************************************************/
 
+/* Копия строкового литерала в Tx_Buf; длина известна на компиляции —
+ * ни stdio, ни strlen не нужны (флеш у нас в дефиците) */
+static uint8_t appendLiteral(uint8_t pos, const char *s, uint8_t len)
+{
+    for (uint8_t i = 0; i < len; i++)
+        Tx_Buf[pos++] = (unsigned char)s[i];
+    return pos;
+}
+
+/*
+ * Function Name        : HandleModbusReportSlaveId
+ * @How to use          : Modbus function 0x11 — Report Slave ID.
+ *   Ответ: [адрес][0x11][счётчик байт][Slave ID][Run ON][PRODUCT_HWx_FWy]
+ *   Строки — константы из version.h (flash), Run Indicator = 0xFF (ON):
+ *   в аварийном состоянии по питанию прибор обмен уже остановил.
+ */
+static void HandleModbusReportSlaveId(void)
+{
+    uint8_t pos = 3; /* Tx_Buf[2] — счётчик байт, заполняется в конце */
+
+    Tx_Buf[0] = MODBUS_SLAVE_ADDRESS;
+    Tx_Buf[1] = MODBUS_REPORT_SLAVE_ID;
+    Tx_Buf[pos++] = MODBUS_SLAVE_ADDRESS; /* Slave ID — как в доноре */
+    Tx_Buf[pos++] = 0xFF;                 /* Run Indicator: 0xFF = ON */
+
+    pos = appendLiteral(pos, DEVICE_PRODUCT_CODE, sizeof(DEVICE_PRODUCT_CODE) - 1);
+    pos = appendLiteral(pos, "_HW", 3);
+    pos = appendLiteral(pos, DEVICE_HW_VERSION, sizeof(DEVICE_HW_VERSION) - 1);
+    pos = appendLiteral(pos, "_FW", 3);
+    pos = appendLiteral(pos, DEVICE_FW_VERSION, sizeof(DEVICE_FW_VERSION) - 1);
+
+    Tx_Buf[2] = pos - 3; /* байты после поля счётчика */
+    Tx_Len = pos;
+    SendMessage();
+}
+/******************************************************************************/
+
 /*
  * Function Name        : RxDataAvailable
  * @return              : If Data is Ready, Return TRUE
@@ -235,7 +274,7 @@ unsigned char CheckRxTimeout(void)
 unsigned char CheckModbusBufferComplete(void)
 {
     int ExpectedReceiveCount = 0;
-    if (ReceiveCounter > 4)
+    if (ReceiveCounter >= 4) /* кадр FC 0x11 — ровно 4 байта, без данных */
     {
         if (ReceiveBuffer[0] == MODBUS_SLAVE_ADDRESS)
         {
@@ -243,8 +282,14 @@ unsigned char CheckModbusBufferComplete(void)
             {
                 ExpectedReceiveCount = 8;
             }
+            else if (ReceiveBuffer[1] == MODBUS_REPORT_SLAVE_ID)
+            {
+                ExpectedReceiveCount = 4; /* запрос: адрес + FC + CRC */
+            }
             else if (ReceiveBuffer[1] == 0x0F || ReceiveBuffer[1] == 0x10)
             {
+                if (ReceiveCounter < 7)
+                    return DATA_NOT_READY; /* байт-счётчик [6] ещё не принят */
                 ExpectedReceiveCount = ReceiveBuffer[6] + 9;
             }
             else
@@ -290,7 +335,8 @@ void RxRTU(void)
         ReceiveCounter = 0;
     }
     CheckRxTimeout();
-    if ((Rx_State == RXTX_DATABUF) && (Rx_DataLen >= 2))
+    /* Rx_DataLen == 0 — валидный случай (FC 0x11 без данных в запросе) */
+    if (Rx_State == RXTX_DATABUF)
     {
         // Finish off our CRC check
         unsigned char dataLen = Rx_DataLen;
@@ -359,6 +405,11 @@ void ProcessModbus(void)
         case MODBUS_WRITE_MULTIPLE_REGISTERS:
         {
             HandleModbusWriteRegisters(Rx_Function);
+            break;
+        }
+        case MODBUS_REPORT_SLAVE_ID:
+        {
+            HandleModbusReportSlaveId();
             break;
         }
         default:

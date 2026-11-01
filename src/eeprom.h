@@ -13,11 +13,11 @@ typedef struct
 {
     uint64_t totalnl;           /* накопленный объём, нанолитры */
     uint64_t gtotalnl;          /* общий накопленный объём, нанолитры */
+    uint64_t impulses;          /* счётчик импульсов */
     uint32_t runtime_device;    /* наработка прибора, сек */
     uint32_t runtime_flowmeter; /* наработка расходомера, сек */
-    uint32_t impulses;          /* счётчик импульсов */
     uint16_t poweron_counter;   /* счётчик включений */
-    uint8_t reserve[18];        /* резерв, заполнять нулями */
+    uint8_t reserve[14];        /* резерв, заполнять нулями */
 } critical_payload_t;
 
 /* Маркер в поле seq: последняя запись сделана аварийным сохранением по PVD.
