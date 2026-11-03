@@ -15,8 +15,10 @@ import os
 import re
 import sys
 
-TWO_WORD_TYPES = {"f32", "u32"}
-FOUR_WORD_TYPES = {"u64"}
+# нормализация типов из карты (регистронезависимо): тип → (format утилиты, слов)
+TYPE_MAP = {"FLOAT": ("f32", 2), "F32": ("f32", 2),
+            "U32": ("u32", 2), "UL": ("u32", 2), "TIME": ("u32", 2),
+            "U64": ("u64", 4)}
 
 
 def _paths_from(project_dir):
@@ -62,7 +64,7 @@ def parse_enum(body):
             continue
         mtype = re.search(r"type:\s*(\S+?)(?:,|$|\s/)", line)
         munit = re.search(r"unit:(.+?)(?:\s*//|$)", line)
-        rtype = mtype.group(1).strip() if mtype else "u16"
+        rtype = (mtype.group(1).strip() if mtype else "U16").upper()
         unit = munit.group(1).strip() if munit else ""
         out.append((name, value, rtype, unit))
     return out
@@ -88,12 +90,12 @@ def build_registers():
 
     def entry(name, value, rtype, unit, kind):
         base = name.split("_", 1)[1] if "_" in name else name
-        fmt = rtype if rtype in (TWO_WORD_TYPES | FOUR_WORD_TYPES) else "dec"
+        fmt, words = TYPE_MAP.get(rtype, ("dec", 1))
         e = {
             "name": base,
             "kind": kind,
             "address": value,
-            "count": 4 if rtype in FOUR_WORD_TYPES else (2 if rtype in TWO_WORD_TYPES else 1),
+            "count": words,
             "unit_id": "",
             "poll_ms": "",
             "poll_enabled": True,

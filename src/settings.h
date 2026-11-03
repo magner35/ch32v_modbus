@@ -117,7 +117,7 @@ enum
  *   FLOAT — без ограничений:         X(имя, FLOAT, -, -,      def)
  *        имя                        тип    мин     макс      дефолт        */
 #define SETTINGS_TABLE(X)                                                                                                                                                  \
-    X(multiplier_parameter, BOOL, -, -, 0, HREG_multiplier_parameter, SETGRP_METER)                  /* 0 - K-фактор, 1 - цена импульса */                                 \
+    X(multiplier_parameter, BOOL, -, -, 1, HREG_multiplier_parameter, SETGRP_METER)                  /* 0 - K-фактор, 1 - цена импульса */                                 \
     X(multiplier_units, ENUM, -, 3, UNITS_ML, HREG_multiplier_units, SETGRP_METER)                   /* 0 - миллилитр, 1 - литр, 2 - метр куб. */                          \
     X(meter_correction, FLOAT, -, -, 1.0f, HREG_meter_correction, SETGRP_METER)                      /* поправочный коэффициент */                                         \
     X(serial_number, U32, 0, 999999, 123456, HREG_serial_number, SETGRP_SERVICE)                     /* серийный номер прибора */                                          \

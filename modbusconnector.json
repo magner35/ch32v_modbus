@@ -29,7 +29,7 @@
           "order": "",
           "scale": 1.0,
           "offset": 0.0,
-          "unit": "FSTATUS",
+          "unit": "",
           "log": true,
           "value_names": {
             "0": "ACCESERROR",
@@ -56,7 +56,7 @@
           "order": "",
           "scale": 1.0,
           "offset": 0.0,
-          "unit": "л/м",
+          "unit": "",
           "log": true,
           "value_names": {},
           "bitmask": false,
@@ -128,7 +128,7 @@
           "order": "",
           "scale": 1.0,
           "offset": 0.0,
-          "unit": "мл/м",
+          "unit": "",
           "log": true,
           "value_names": {},
           "bitmask": false,
@@ -146,7 +146,7 @@
           "order": "",
           "scale": 1.0,
           "offset": 0.0,
-          "unit": "мл",
+          "unit": "",
           "log": true,
           "value_names": {},
           "bitmask": false,
@@ -164,7 +164,7 @@
           "order": "",
           "scale": 1.0,
           "offset": 0.0,
-          "unit": "мл",
+          "unit": "",
           "log": true,
           "value_names": {},
           "bitmask": false,
@@ -182,7 +182,7 @@
           "order": "",
           "scale": 1.0,
           "offset": 0.0,
-          "unit": "Гц",
+          "unit": "",
           "log": true,
           "value_names": {},
           "bitmask": false,
@@ -236,7 +236,7 @@
           "order": "",
           "scale": 1.0,
           "offset": 0.0,
-          "unit": "л/м",
+          "unit": "",
           "log": true,
           "value_names": {},
           "bitmask": false,
@@ -254,7 +254,7 @@
           "order": "",
           "scale": 1.0,
           "offset": 0.0,
-          "unit": "с",
+          "unit": "",
           "log": true,
           "value_names": {},
           "bitmask": false,
@@ -272,7 +272,7 @@
           "order": "",
           "scale": 1.0,
           "offset": 0.0,
-          "unit": "с",
+          "unit": "",
           "log": true,
           "value_names": {},
           "bitmask": false,
@@ -426,11 +426,11 @@
           "name": "PASSWORD",
           "kind": "holding_registers",
           "address": 1,
-          "count": 1,
+          "count": 2,
           "unit_id": "",
           "poll_ms": "",
           "poll_enabled": true,
-          "format": "dec",
+          "format": "u32",
           "order": "",
           "scale": 1.0,
           "offset": 0.0,
@@ -443,7 +443,7 @@
         {
           "name": "serial_number",
           "kind": "holding_registers",
-          "address": 2,
+          "address": 3,
           "count": 2,
           "unit_id": "",
           "poll_ms": "",
@@ -461,7 +461,7 @@
         {
           "name": "units_time_base",
           "kind": "holding_registers",
-          "address": 4,
+          "address": 5,
           "count": 1,
           "unit_id": "",
           "poll_ms": "",
@@ -479,7 +479,7 @@
         {
           "name": "units_rate",
           "kind": "holding_registers",
-          "address": 5,
+          "address": 6,
           "count": 1,
           "unit_id": "",
           "poll_ms": "",
@@ -497,7 +497,7 @@
         {
           "name": "units_total",
           "kind": "holding_registers",
-          "address": 6,
+          "address": 7,
           "count": 1,
           "unit_id": "",
           "poll_ms": "",
@@ -515,7 +515,7 @@
         {
           "name": "aout_parameter",
           "kind": "holding_registers",
-          "address": 7,
+          "address": 8,
           "count": 1,
           "unit_id": "",
           "poll_ms": "",
@@ -533,7 +533,7 @@
         {
           "name": "aout_treshold_4ma",
           "kind": "holding_registers",
-          "address": 8,
+          "address": 9,
           "count": 2,
           "unit_id": "",
           "poll_ms": "",
@@ -551,7 +551,7 @@
         {
           "name": "aout_treshold_20ma",
           "kind": "holding_registers",
-          "address": 10,
+          "address": 11,
           "count": 2,
           "unit_id": "",
           "poll_ms": "",
@@ -569,7 +569,7 @@
         {
           "name": "aout_calibration_low",
           "kind": "holding_registers",
-          "address": 12,
+          "address": 13,
           "count": 2,
           "unit_id": "",
           "poll_ms": "",
@@ -587,7 +587,7 @@
         {
           "name": "aout_calibration_high",
           "kind": "holding_registers",
-          "address": 14,
+          "address": 15,
           "count": 2,
           "unit_id": "",
           "poll_ms": "",
@@ -605,7 +605,7 @@
         {
           "name": "rate_damping",
           "kind": "holding_registers",
-          "address": 16,
+          "address": 17,
           "count": 1,
           "unit_id": "",
           "poll_ms": "",
@@ -623,7 +623,7 @@
         {
           "name": "rate_averaging",
           "kind": "holding_registers",
-          "address": 17,
+          "address": 18,
           "count": 1,
           "unit_id": "",
           "poll_ms": "",
@@ -641,7 +641,7 @@
         {
           "name": "input_sens",
           "kind": "holding_registers",
-          "address": 18,
+          "address": 19,
           "count": 1,
           "unit_id": "",
           "poll_ms": "",
@@ -659,7 +659,7 @@
         {
           "name": "sensor_filter_freq_high",
           "kind": "holding_registers",
-          "address": 19,
+          "address": 20,
           "count": 1,
           "unit_id": "",
           "poll_ms": "",
@@ -677,7 +677,7 @@
         {
           "name": "sensor_filter_freq_low",
           "kind": "holding_registers",
-          "address": 20,
+          "address": 21,
           "count": 1,
           "unit_id": "",
           "poll_ms": "",
@@ -695,7 +695,7 @@
         {
           "name": "sensor_filter_duty",
           "kind": "holding_registers",
-          "address": 21,
+          "address": 22,
           "count": 1,
           "unit_id": "",
           "poll_ms": "",
@@ -713,7 +713,7 @@
         {
           "name": "interfaceRS485_slave_address",
           "kind": "holding_registers",
-          "address": 22,
+          "address": 23,
           "count": 1,
           "unit_id": "",
           "poll_ms": "",
@@ -731,7 +731,7 @@
         {
           "name": "interfaceRS485_baudrate",
           "kind": "holding_registers",
-          "address": 23,
+          "address": 24,
           "count": 1,
           "unit_id": "",
           "poll_ms": "",
@@ -749,7 +749,7 @@
         {
           "name": "interfaceRS485_parity",
           "kind": "holding_registers",
-          "address": 24,
+          "address": 25,
           "count": 1,
           "unit_id": "",
           "poll_ms": "",
@@ -767,7 +767,7 @@
         {
           "name": "interfaceRS485_stopbits",
           "kind": "holding_registers",
-          "address": 25,
+          "address": 26,
           "count": 1,
           "unit_id": "",
           "poll_ms": "",
@@ -785,7 +785,7 @@
         {
           "name": "interfaceRS485_delay",
           "kind": "holding_registers",
-          "address": 26,
+          "address": 27,
           "count": 1,
           "unit_id": "",
           "poll_ms": "",
@@ -803,7 +803,7 @@
         {
           "name": "interfaceRS485_mode",
           "kind": "holding_registers",
-          "address": 27,
+          "address": 28,
           "count": 1,
           "unit_id": "",
           "poll_ms": "",
@@ -821,7 +821,7 @@
         {
           "name": "setpoint_qmax",
           "kind": "holding_registers",
-          "address": 28,
+          "address": 29,
           "count": 2,
           "unit_id": "",
           "poll_ms": "",
@@ -839,7 +839,7 @@
         {
           "name": "setpoint_qmin",
           "kind": "holding_registers",
-          "address": 30,
+          "address": 31,
           "count": 2,
           "unit_id": "",
           "poll_ms": "",
@@ -857,7 +857,7 @@
         {
           "name": "scaled_pulse",
           "kind": "holding_registers",
-          "address": 32,
+          "address": 33,
           "count": 2,
           "unit_id": "",
           "poll_ms": "",
@@ -875,7 +875,7 @@
         {
           "name": "multiplier_parameter",
           "kind": "holding_registers",
-          "address": 34,
+          "address": 35,
           "count": 1,
           "unit_id": "",
           "poll_ms": "",
@@ -893,7 +893,7 @@
         {
           "name": "multiplier_units",
           "kind": "holding_registers",
-          "address": 35,
+          "address": 36,
           "count": 1,
           "unit_id": "",
           "poll_ms": "",
@@ -911,7 +911,7 @@
         {
           "name": "meter_correction",
           "kind": "holding_registers",
-          "address": 36,
+          "address": 37,
           "count": 2,
           "unit_id": "",
           "poll_ms": "",
@@ -929,7 +929,7 @@
         {
           "name": "LPF1",
           "kind": "holding_registers",
-          "address": 38,
+          "address": 39,
           "count": 2,
           "unit_id": "",
           "poll_ms": "",
@@ -947,7 +947,7 @@
         {
           "name": "LPF2",
           "kind": "holding_registers",
-          "address": 40,
+          "address": 41,
           "count": 2,
           "unit_id": "",
           "poll_ms": "",
@@ -965,7 +965,7 @@
         {
           "name": "LPF3",
           "kind": "holding_registers",
-          "address": 42,
+          "address": 43,
           "count": 2,
           "unit_id": "",
           "poll_ms": "",
@@ -983,7 +983,7 @@
         {
           "name": "LPF4",
           "kind": "holding_registers",
-          "address": 44,
+          "address": 45,
           "count": 2,
           "unit_id": "",
           "poll_ms": "",
@@ -1001,7 +1001,7 @@
         {
           "name": "LPF5",
           "kind": "holding_registers",
-          "address": 46,
+          "address": 47,
           "count": 2,
           "unit_id": "",
           "poll_ms": "",
@@ -1019,7 +1019,7 @@
         {
           "name": "LPF6",
           "kind": "holding_registers",
-          "address": 48,
+          "address": 49,
           "count": 2,
           "unit_id": "",
           "poll_ms": "",
@@ -1037,7 +1037,7 @@
         {
           "name": "LPF7",
           "kind": "holding_registers",
-          "address": 50,
+          "address": 51,
           "count": 2,
           "unit_id": "",
           "poll_ms": "",
@@ -1055,7 +1055,7 @@
         {
           "name": "LPF8",
           "kind": "holding_registers",
-          "address": 52,
+          "address": 53,
           "count": 2,
           "unit_id": "",
           "poll_ms": "",
@@ -1073,7 +1073,7 @@
         {
           "name": "LPF9",
           "kind": "holding_registers",
-          "address": 54,
+          "address": 55,
           "count": 2,
           "unit_id": "",
           "poll_ms": "",
@@ -1091,7 +1091,7 @@
         {
           "name": "LPF10",
           "kind": "holding_registers",
-          "address": 56,
+          "address": 57,
           "count": 2,
           "unit_id": "",
           "poll_ms": "",
@@ -1109,7 +1109,7 @@
         {
           "name": "LPV1",
           "kind": "holding_registers",
-          "address": 58,
+          "address": 59,
           "count": 2,
           "unit_id": "",
           "poll_ms": "",
@@ -1127,7 +1127,7 @@
         {
           "name": "LPV2",
           "kind": "holding_registers",
-          "address": 60,
+          "address": 61,
           "count": 2,
           "unit_id": "",
           "poll_ms": "",
@@ -1145,7 +1145,7 @@
         {
           "name": "LPV3",
           "kind": "holding_registers",
-          "address": 62,
+          "address": 63,
           "count": 2,
           "unit_id": "",
           "poll_ms": "",
@@ -1163,7 +1163,7 @@
         {
           "name": "LPV4",
           "kind": "holding_registers",
-          "address": 64,
+          "address": 65,
           "count": 2,
           "unit_id": "",
           "poll_ms": "",
@@ -1181,7 +1181,7 @@
         {
           "name": "LPV5",
           "kind": "holding_registers",
-          "address": 66,
+          "address": 67,
           "count": 2,
           "unit_id": "",
           "poll_ms": "",
@@ -1199,7 +1199,7 @@
         {
           "name": "LPV6",
           "kind": "holding_registers",
-          "address": 68,
+          "address": 69,
           "count": 2,
           "unit_id": "",
           "poll_ms": "",
@@ -1217,7 +1217,7 @@
         {
           "name": "LPV7",
           "kind": "holding_registers",
-          "address": 70,
+          "address": 71,
           "count": 2,
           "unit_id": "",
           "poll_ms": "",
@@ -1235,7 +1235,7 @@
         {
           "name": "LPV8",
           "kind": "holding_registers",
-          "address": 72,
+          "address": 73,
           "count": 2,
           "unit_id": "",
           "poll_ms": "",
@@ -1253,7 +1253,7 @@
         {
           "name": "LPV9",
           "kind": "holding_registers",
-          "address": 74,
+          "address": 75,
           "count": 2,
           "unit_id": "",
           "poll_ms": "",
@@ -1271,7 +1271,7 @@
         {
           "name": "LPV10",
           "kind": "holding_registers",
-          "address": 76,
+          "address": 77,
           "count": 2,
           "unit_id": "",
           "poll_ms": "",

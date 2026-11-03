@@ -22,7 +22,7 @@ enum
     MENUPASS_SERVICE,
     MENUPASS_COUNT
 };
-static const uint16_t menu_pass[MENUPASS_COUNT] = {1000, 2000, 3000};
+static const uint32_t menu_pass[MENUPASS_COUNT] = {100000, 200000, 300000};
 
 #define ACCES_ERROR_TIMEOUT_MS 10000u
 
@@ -122,7 +122,7 @@ void modbusControl(void)
 
     if (!(status & (1 << FSTATUS_ACCESERROR)))
     {
-        uint16_t password = holdingRegisters[HREG_PASSWORD];
+        uint32_t password = modbusRegisterToLong(&holdingRegisters[HREG_PASSWORD]); /* 2 регистра, ABCD */
 
         /* системные параметры (RS-485, калибровка АВ, серийник) */
         if (control == HCTRL_SYSTEM_WRITE)
